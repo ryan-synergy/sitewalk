@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="SiteWalk">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#F6F4ED" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141512" media="(prefers-color-scheme: dark)">
+<title>SiteWalk — AV Site Survey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F6F4ED; --surface:#FFFFFF; --ink:#191713; --muted:#76715F;
+    --line:#DCD8C9; --line2:#B9B5A4; --orange:#E8500A; --orange-dim:#F4C9B2;
+    --sans:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#141512; --surface:#1B1C1A; --ink:#E8E6DE; --muted:#8E908A;
+      --line:#2B2D29; --line2:#45473F; --orange:#FFB000; --orange-dim:#6B4A00;
+    }
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:var(--paper); color:var(--ink);
+    font-family:var(--sans); font-size:16px;}
+  #topbar{position:sticky; top:0; z-index:20; background:var(--paper);
+    padding:calc(10px + env(safe-area-inset-top)) 16px 10px 16px;
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    border-bottom:1px solid var(--ink);}
+  #topbar .wordmark{font-size:12px; font-weight:500; letter-spacing:.16em;}
+  #topbar .tb-btn{background:none; border:none; color:var(--ink); font-family:var(--mono);
+    font-size:12px; letter-spacing:.06em; padding:8px 0; cursor:pointer;}
+  #topbar .tb-btn.left{color:var(--muted);}
+  #app{max-width:560px; margin:0 auto; padding:14px 16px 110px 16px;}
+  h2{font-family:var(--mono); font-size:11px; font-weight:500; letter-spacing:.12em;
+    color:var(--muted); margin:24px 0 8px 1px; text-transform:uppercase;}
+  h2 .h2btn{float:right; color:var(--ink); cursor:pointer; border-bottom:1px solid var(--line2); padding-bottom:1px;}
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:3px;
+    padding:14px; margin-bottom:10px;}
+  .row{display:flex; align-items:center; gap:10px;}
+  .grow{flex:1; min-width:0;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  input[type=text],input[type=number],input[type=date],textarea{
+    width:100%; background:var(--surface); color:var(--ink); border:1px solid var(--line2);
+    border-radius:2px; padding:11px 12px; font-size:16px; font-family:var(--sans); outline:none;}
+  input:focus,textarea:focus{border-color:var(--ink);}
+  textarea{min-height:70px; resize:vertical;}
+  label.fld{display:block; font-family:var(--mono); font-size:11px; letter-spacing:.1em;
+    color:var(--muted); margin:12px 0 5px 1px; text-transform:uppercase;}
+  label.fld:first-child{margin-top:0;}
+  .chips{display:flex; flex-wrap:wrap; gap:7px;}
+  .chip{padding:11px 14px; border-radius:2px; background:var(--surface); color:var(--ink);
+    border:1px solid var(--line2); font-size:14px; cursor:pointer; user-select:none; min-height:44px;
+    display:inline-flex; align-items:center;}
+  .chip.on{background:var(--ink); border-color:var(--ink); color:var(--paper); font-weight:500;}
+  .chip.warn{border-color:var(--orange); color:var(--orange);}
+  .chip .x{margin-left:8px; color:var(--muted); font-size:12px;}
+  .chip.on .x{color:var(--paper);}
+  .badge{display:inline-block; font-family:var(--mono); font-size:11px; letter-spacing:.08em;
+    color:var(--orange); border:1px solid var(--orange); border-radius:2px; padding:5px 9px; margin:10px 8px 0 0;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:46px;
+    background:var(--surface); color:var(--ink); border:1px solid var(--line2); border-radius:2px;
+    padding:11px 16px; font-size:14px; font-weight:500; font-family:var(--sans); cursor:pointer; letter-spacing:.02em;}
+  .btn:active{opacity:.65;}
+  .btn.primary{background:var(--ink); border-color:var(--ink); color:var(--paper); letter-spacing:.05em;}
+  .btn.danger{color:var(--orange); border-color:var(--orange);}
+  .btn.block{display:flex; width:100%;}
+  .btn.small{min-height:38px; padding:7px 12px; font-size:13px; font-weight:400;}
+  .item{display:flex; align-items:center; gap:11px; padding:12px 13px; background:var(--surface);
+    border:1px solid var(--line); border-radius:3px; margin-bottom:7px; cursor:pointer;}
+  .item:active{border-color:var(--ink);}
+  .item.sel{border-color:var(--ink); background:var(--paper);}
+  .idx{font-family:var(--mono); font-size:12px; color:var(--muted); min-width:22px;}
+  .idx.flag{color:var(--orange); font-weight:500;}
+  .item .title{font-weight:500; font-size:15px;}
+  .item .sub{font-size:12.5px; color:var(--muted); margin-top:2px; line-height:1.45;}
+  .icon-btn{background:none; border:none; color:var(--muted); font-size:15px; padding:8px 6px; cursor:pointer; font-family:var(--sans);}
+  .muted{color:var(--muted); font-size:13px;}
+  .mono{font-family:var(--mono);}
+  .calc{margin-top:10px; padding:10px 12px; border-top:1px dashed var(--line2);
+    font-family:var(--mono); font-size:13px; line-height:1.6;}
+  .calc b{color:var(--orange); font-weight:500;}
+  .flags{border:1px solid var(--orange); border-radius:3px; padding:10px 13px; margin-bottom:12px;}
+  .flags .ftitle{font-family:var(--mono); font-size:11px; letter-spacing:.12em; color:var(--orange); margin-bottom:7px;}
+  .flags .fitem{font-size:14px; padding:7px 0; border-top:1px solid var(--line); cursor:pointer;}
+  .flags .fitem:first-of-type{border-top:none;}
+  .flags .fitem span{color:var(--muted); font-size:12.5px;}
+  .stepper{display:flex; align-items:center; gap:0; border:1px solid var(--line2); border-radius:2px; width:max-content;}
+  .stepper button{width:44px; height:44px; background:var(--surface); color:var(--ink);
+    border:none; font-size:20px; cursor:pointer; font-family:var(--mono);}
+  .stepper .val{font-family:var(--mono); font-size:15px; min-width:38px; text-align:center;
+    border-left:1px solid var(--line2); border-right:1px solid var(--line2); align-self:stretch;
+    display:flex; align-items:center; justify-content:center;}
+  .steprow{display:flex; align-items:center; justify-content:space-between; padding:7px 0;}
+  .steprow .slabel{font-size:14px;}
+  .tally td{padding:5px 0; font-size:14px; border-top:1px solid var(--line);}
+  .tally tr:first-child td{border-top:none;}
+  .tally .tv{font-family:var(--mono); text-align:right; font-size:13.5px;}
+  .tally .twarn{color:var(--orange);}
+  table{width:100%; border-collapse:collapse;}
+  .empty{text-align:center; color:var(--muted); padding:34px 10px 26px; font-size:14px; font-family:var(--mono); line-height:1.8;}
+  .rule{border-top:1px solid var(--ink); margin:18px 0 0;}
+  #bottombar{position:fixed; bottom:0; left:0; right:0; z-index:20; background:var(--paper);
+    border-top:1px solid var(--ink); padding:10px 16px calc(10px + env(safe-area-inset-bottom)) 16px;}
+  #bottombar .inner{max-width:560px; margin:0 auto; display:flex; gap:8px;}
+  #overlay{position:fixed; inset:0; z-index:40; background:var(--paper); overflow-y:auto; display:none;
+    padding:calc(14px + env(safe-area-inset-top)) 16px calc(30px + env(safe-area-inset-bottom)) 16px;}
+  #overlay .inner{max-width:560px; margin:0 auto;}
+  .sheet-table td,.sheet-table th{padding:11px 4px; border-bottom:1px solid var(--line);
+    font-family:var(--mono); font-size:16px; text-align:right;}
+  .sheet-table th{font-size:11px; letter-spacing:.12em; color:var(--muted); font-weight:400; text-transform:uppercase;}
+  .sheet-table td:first-child,.sheet-table th:first-child{text-align:left;}
+  .sheet-table td:first-child{font-weight:500; font-size:18px;}
+  .sheet-table tr.tap{cursor:pointer;}
+  .namegrid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px;}
+  .namegrid .chip{justify-content:center; min-height:50px; font-size:15px;}
+  .ovh{display:flex; justify-content:space-between; align-items:baseline; border-bottom:1px solid var(--ink); padding-bottom:9px;}
+  .ovh .t{font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--muted);}
+  .ovh .c{font-family:var(--mono); font-size:13px; color:var(--ink); cursor:pointer; padding:4px 0 4px 16px;}
+  #toast{position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(8px); z-index:60;
+    background:var(--ink); color:var(--paper); padding:11px 18px; border-radius:2px; font-size:14px;
+    opacity:0; transition:opacity .18s, transform .18s; pointer-events:none; display:flex; gap:16px; white-space:nowrap;}
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto;}
+  #toast .undo{color:var(--orange); font-weight:500; cursor:pointer; letter-spacing:.04em;}
+  .rev-room{padding:13px 0; border-bottom:1px solid var(--line);}
+  .rev-room .rname{font-weight:500; font-size:16px;}
+  .rev-room .rline{font-size:14px; color:var(--ink); margin-top:3px; line-height:1.55;}
+  .rev-room .rnote{font-size:13px; color:var(--muted); margin-top:3px;}
+  .rev-floor{font-family:var(--mono); font-size:11px; letter-spacing:.13em; color:var(--muted);
+    text-transform:uppercase; margin:20px 0 2px;}
+  .tbd{color:var(--orange); font-family:var(--mono); font-size:0.9em;}
+  @media print{
+    #topbar,#bottombar,.no-print,#toast,#overlay{display:none !important;}
+    body{background:#fff; color:#16140F;}
+    :root{--paper:#fff; --surface:#fff; --ink:#16140F; --muted:#5B574A; --line:#D8D4C8; --line2:#B9B5A4; --orange:#C74105; --orange-dim:#F4C9B2;}
+    #app{padding:0; max-width:none;}
+  }
+</style>
+</head>
+<body>
+<div id="topbar"></div>
+<div id="app"></div>
+<div id="bottombar"></div>
+<div id="overlay"><div class="inner" id="overlay-inner"></div></div>
+<div id="toast"></div>
+<script>
+"use strict";
+
+/* ============ constants ============ */
+const TVDIMS = {32:[29,17.25],43:[38,22.5],49:[43.25,25],55:[48.5,28],65:[57,32.75],
+  75:[66,37.75],77:[67.87,39.37],83:[72.87,42.12],85:[75.25,43.25],98:[85.9,49.6],115:[101.25,58]};
+const TV_SIZES = Object.keys(TVDIMS).map(Number).sort((a,b)=>a-b);
+const SHEET_DISP = {32:["29","17 ¼"],43:["38","22 ½"],49:["43 ¼","25"],55:["48 ½","28"],
+  65:["57","32 ¾"],75:["66","37 ¾"],77:["67.87","39.37"],83:["72.87","42.12"],
+  85:["75 ¼","43 ¼"],98:["85.9","49.6"],115:["101 ¼","58"]};
+const AUDIO = [
+  {id:"none",label:"No audio"},
+  {id:"tv",label:"TV speakers"},
+  {id:"soundbar",label:"Soundbar",bar:true},
+  {id:"soundbar-sub",label:"Soundbar + Sub",bar:true,sub:true},
+  {id:"2.0",label:"2.0 Stereo",stereo:true,spk:2},
+  {id:"2.1",label:"2.1",stereo:true,spk:2,sub:true},
+  {id:"5.1",label:"5.1",avr:true,spk:5,sub:true},
+  {id:"5.1.2",label:"5.1.2 Atmos",avr:true,spk:7,sub:true},
+  {id:"7.1",label:"7.1",avr:true,spk:7,sub:true},
+  {id:"7.1.4",label:"7.1.4 Atmos",avr:true,spk:11,sub:true},
+];
+const aMeta = id => AUDIO.find(a=>a.id===id) || AUDIO[0];
+const SPK_TYPES = ["In-ceiling","In-wall","On-wall","Bookshelf","Floor-standing","Invisible"];
+const SUB_LOCS = ["In-wall","In-ceiling","Floor-standing","In cabinet"];
+const MOUNTS = ["Wall mount","On cabinet","Built-in / recessed"];
+const STATUS3 = ["New","Existing — keep","Existing — replace"];
+const LOCAL_SOURCES = ["Apple TV","Roku","DirecTV","Dish","Cable box","Game console","Other"];
+const EQUIP_LOCS = ["Behind TV","Cabinet in room","Closet nearby","Head-end rack"];
+const RACK_SOURCES = ["Apple TV","Roku","DirecTV","Dish","Cable box","Kaleidescape","Game console","Other"];
+const CAM_TYPES = ["Doorbell","Turret","Dome","Bullet","PTZ","Indoor"];
+const ROOM_NAMES = ["Master Bedroom","Bedroom","Guest Room","Living Room","Family Room","Great Room",
+  "Kitchen","Dining Room","Office","Den","Media Room","Theater","Bonus Room","Gym","Bar",
+  "Basement","Loft","Patio","Pool / Yard","Garage"];
+const FLOORS = ["Main","Upper","Lower","Outdoor"];
+const JOB_TYPES = ["New construction","Retrofit","Mixed"];
+const CONTROL_SYSTEMS = ["Savant","Control4","None"];
+const HABITS = ["DirecTV","Dish","YouTube TV / streaming","Cable","Mixed"];
+const WIRING = [["prewired","Pre-wired"],["open","Open walls"],["fishing","Needs fishing"]];
+const wLabel = id => { const w = WIRING.find(x=>x[0]===id); return w ? w[1] : ""; };
+const EXW = [["CAT5e","CAT5e"],["CAT6","CAT6"],["Coax","Coax (RG6)"],["HDMI","HDMI"],
+  ["Component","Component (RGB)"],["Composite","Composite"],["SpeakerWire","Speaker wire"],
+  ["Conduit","Conduit"],["Power","Power @ TV"]];
+const CONTROLS = ["System remote","Keypad","Touch panel","App only","Factory remote","None"];
+const STARTER_PRESETS = [
+  {name:"TV only", cfg:{tv:true,audio:"tv",videoFeed:"matrix"}},
+  {name:"TV + Soundbar", cfg:{tv:true,audio:"soundbar",videoFeed:"matrix"}},
+  {name:"TV + 2-ch ceiling", cfg:{tv:true,audio:"2.0",spkType:"In-ceiling",audioFeed:"house",videoFeed:"matrix"}},
+  {name:"Surround 5.1", cfg:{tv:true,audio:"5.1",spkType:"In-ceiling",subLoc:"In-wall",videoFeed:"matrix",equipLoc:"Head-end rack"}},
+  {name:"Audio zone (no TV)", cfg:{tv:false,audio:"2.0",spkType:"In-ceiling",audioFeed:"house",videoFeed:"none"}},
+  {name:"Landscape audio", cfg:{tv:false,audio:"none",landscape:true,satCount:8,buriedSub:true,videoFeed:"none"}},
+  {name:"Theater 5.1.2", cfg:{tv:true,isTheater:true,thDisplay:"Large-format panel",audio:"5.1.2",spkType:"In-wall",subLoc:"In-wall",videoFeed:"matrix",equipLoc:"Head-end rack"}},
+];
+
+/* ============ state ============ */
+const LS_PROJ = "sitewalk.projects.v2";
+const LS_PRESETS = "sitewalk.presets.v1";
+let projects = [], customPresets = [];
+try{ projects = JSON.parse(localStorage.getItem(LS_PROJ) || "[]"); }catch(e){}
+try{ customPresets = JSON.parse(localStorage.getItem(LS_PRESETS) || "[]"); }catch(e){}
+let view = "home", curProj = null, curRoom = null, lastView = "";
+let arrangeSel = null, sheetFromRoom = false, lastDeleted = null;
+
+const save = () => localStorage.setItem(LS_PROJ, JSON.stringify(projects));
+const savePresets = () => localStorage.setItem(LS_PRESETS, JSON.stringify(customPresets));
+const uid = () => Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-3);
+const proj = () => projects.find(p=>p.id===curProj);
+const room = () => { const p=proj(); return p ? p.rooms.find(r=>r.id===curRoom) : null; };
+const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const $ = id => document.getElementById(id);
+
+function toast(msg, undoFn){
+  const t = $("toast");
+  t.innerHTML = esc(msg) + (undoFn ? ' <span class="undo" onclick="doUndo()">UNDO</span>' : "");
+  window._undoFn = undoFn || null;
+  t.classList.add("show");
+  clearTimeout(t._tm);
+  t._tm = setTimeout(()=>{ t.classList.remove("show"); window._undoFn = null; }, undoFn?5000:1800);
+}
+function doUndo(){ if(window._undoFn){ window._undoFn(); window._undoFn=null; $("toast").classList.remove("show"); } }
+
+/* ============ factories ============ */
+function newProj(){
+  return { id:uid(), schema:2, client:"", address:"", date:new Date().toISOString().slice(0,10),
+    jobType:"", controlSystem:"", habits:[], notes:"", lastBackup:"",
+    rack:{ location:"", notes:"", sourcesTBD:true, sources:Object.fromEntries(RACK_SOURCES.map(s=>[s,0])) },
+    network:{ isp:"", modemLoc:"", waps:0, drops:0, notes:"" },
+    cameras:[], rooms:[] };
+}
+function newRoom(p, name){
+  return { id:uid(), name:name||"", floor:"", flagged:false,
+    tv:true, tvSize:"", tvStatus:"New", mount:"Wall mount",
+    fireplace:false, fpW:"", fpH:"", fpMantel:"", wallW:"", wallH:"",
+    isTheater:false, thDisplay:"", thScreen:"", thRows:1, thSeats:4, riser:false, acoustic:false,
+    audio:"tv", spkType:"In-ceiling", subLoc:"In-wall", audStatus:"New", audioFeed:"house", zoneName:"",
+    landscape:false, satCount:8, buriedSub:true,
+    videoFeed:"matrix", localSources:[], equipLoc:"Head-end rack",
+    control:"", wiring:(p.jobType==="New construction"?"open":""),
+    exw:Object.fromEntries(EXW.map(x=>[x[0],0])), notes:"" };
+}
+
+/* ============ domain logic ============ */
+function autoControl(p, r){
+  const a = aMeta(r.audio);
+  if(!r.tv && a.id==="none" && !r.landscape) return "None";
+  const onSys = r.videoFeed==="matrix" || (a.stereo && r.audioFeed==="house") || r.landscape;
+  if(onSys && p.controlSystem && p.controlSystem!=="None") return "System remote";
+  return "Factory remote";
+}
+const ctrlOf = (p,r) => r.control || autoControl(p,r);
+const zoneOf = r => (r.zoneName || r.name || "Zone").trim();
+const isHouseFed = r => r.landscape || (aMeta(r.audio).stereo && r.audioFeed==="house");
+const needsInfra = r => r.tv || aMeta(r.audio).id!=="none" || r.landscape;
+const hasCat = r => (r.exw.CAT5e>0 || r.exw.CAT6>0);
+
+function roomFlags(p, r){
+  const f = [], a = aMeta(r.audio);
+  if(r.tv && !r.tvSize && !(r.isTheater && r.thDisplay==="Projector")) f.push("TV size TBD");
+  if(!r.wiring && needsInfra(r)) f.push("Wiring unknown");
+  if(r.isTheater){
+    if(!r.thDisplay) f.push("Theater: display type?");
+    else if(r.thDisplay==="Projector" && !r.thScreen) f.push("Theater: screen size TBD");
+  }
+  if(r.videoFeed==="matrix" && r.wiring==="fishing" && !hasCat(r)) f.push("No CAT path for decoder");
+  if((a.spk || r.landscape) && r.wiring==="fishing" && !r.exw.SpeakerWire) f.push("Speaker wire path?");
+  if(r.flagged) f.push("Flagged on walk");
+  return f;
+}
+function projFlags(p){
+  const out = [];
+  p.rooms.forEach(r => roomFlags(p,r).forEach(fl => out.push({roomId:r.id, room:r.name||"Unnamed", label:fl})));
+  if(p.rack.sourcesTBD && p.rooms.some(r=>r.videoFeed==="matrix"))
+    out.push({roomId:null, room:"Rack", label:"Sources TBD — encoder count open"});
+  return out;
+}
+
+function buildSheet(p){
+  const rows = [];
+  const tvRooms = p.rooms.filter(r=>r.tv);
+  const newTVs = tvRooms.filter(r=>r.tvStatus!=="Existing — keep");
+  const keepTVs = tvRooms.length - newTVs.length;
+  const bySize = {};
+  newTVs.forEach(r=>{ const k = r.tvSize ? r.tvSize+'"' : "TBD"; bySize[k]=(bySize[k]||0)+1; });
+  const sizeStr = Object.entries(bySize).map(([k,v])=>v+"×"+k).join("  ") || "0";
+  rows.push(["TVs (new)", sizeStr + (keepTVs?("   +"+keepTVs+" existing"):"")]);
+  const dec = p.rooms.filter(r=>r.videoFeed==="matrix").length;
+  rows.push(["MXNet decoders", dec]);
+  const encN = Object.values(p.rack.sources).reduce((a,b)=>a+(+b||0),0);
+  rows.push(["MXNet encoders", p.rack.sourcesTBD ? "TBD" : encN]);
+  const zones = new Set(p.rooms.filter(isHouseFed).map(r=>zoneOf(r).toLowerCase()));
+  rows.push(["House-amp zones", zones.size]);
+  rows.push(["AVRs", p.rooms.filter(r=>aMeta(r.audio).avr).length]);
+  const localAmps = p.rooms.filter(r=>aMeta(r.audio).stereo && r.audioFeed==="local").length;
+  if(localAmps) rows.push(["Local stereo amps", localAmps]);
+  const bars = p.rooms.filter(r=>aMeta(r.audio).bar).length;
+  if(bars) rows.push(["Soundbars", bars]);
+  let spk=0, subs=0;
+  p.rooms.forEach(r=>{ const a=aMeta(r.audio); spk+=(a.spk||0); if(a.sub) subs++; });
+  rows.push(["Speakers", spk]); rows.push(["Subwoofers", subs]);
+  const sats = p.rooms.filter(r=>r.landscape).reduce((a,r)=>a+(+r.satCount||0),0);
+  if(sats) rows.push(["Landscape satellites", sats + " + " + p.rooms.filter(r=>r.landscape&&r.buriedSub).length + " buried sub"]);
+  const ctr = {};
+  p.rooms.forEach(r=>{ const c=ctrlOf(p,r); ctr[c]=(ctr[c]||0)+1; });
+  ["System remote","Keypad","Touch panel"].forEach(c=>{ if(ctr[c]) rows.push([c+"s", ctr[c]]); });
+  rows.push(["Cameras", p.cameras.length]);
+  rows.push(["WAPs", +p.network.waps||0]);
+  const ports = dec + (p.rack.sourcesTBD?0:encN) + (+p.network.waps||0) + p.cameras.length + (+p.network.drops||0);
+  rows.push(["Switch ports (min)", ports + (p.rack.sourcesTBD?" + encoders":"")]);
+  return rows;
+}
+
+function tvCalc(r){
+  const w = parseFloat(r.wallW);
+  if(!w || w<=0) return null;
+  const usable = w*12 - 16, h = parseFloat(r.wallH);
+  let best = null;
+  for(const s of TV_SIZES){
+    const [tw,th] = TVDIMS[s];
+    if(tw<=usable && (!h || h<=0 || th<=h*12-16)) best = s;
+  }
+  return best ? {size:best, tw:TVDIMS[best][0], th:TVDIMS[best][1]} : {size:0};
+}
+
+function roomSummary(p, r){
+  const bits = [], a = aMeta(r.audio);
+  if(r.isTheater && r.thDisplay==="Projector") bits.push("Projector" + (r.thScreen?(" "+r.thScreen+'"'):""));
+  else if(r.tv) bits.push((r.tvSize?r.tvSize+'"':"TBD") + (r.tvStatus!=="New"?" ("+r.tvStatus.replace("Existing — ","exist. ")+")":""));
+  if(r.landscape) bits.push("Landscape " + r.satCount + " sat");
+  else if(a.id!=="none" && a.id!=="tv"){
+    let s = a.label;
+    if(a.spk) s += " " + r.spkType.toLowerCase();
+    if(a.stereo) s += r.audioFeed==="house" ? " · house amp" : " · local amp";
+    bits.push(s);
+  }
+  if(r.tv) bits.push(r.videoFeed==="matrix" ? "on system" : (r.videoFeed==="local" ? "off system: "+(r.localSources.join(", ")||"?") : "no source"));
+  if(r.wiring) bits.push(wLabel(r.wiring).toLowerCase());
+  return bits.join(" — ") || "Empty room";
+}
+
+/* ============ render core ============ */
+function render(){
+  if(view!=="home" && !proj()) view = "home";
+  if(view==="room" && !room()) view = "project";
+  const y = window.scrollY;
+  $("app").innerHTML = view==="home" ? rHome() : view==="project" ? rProject()
+    : view==="room" ? rRoom() : view==="arrange" ? rArrange() : rReview();
+  $("topbar").innerHTML = rTopbar();
+  $("bottombar").innerHTML = rBottombar();
+  $("bottombar").style.display = view==="home" ? "none" : "block";
+  if(view===lastView) window.scrollTo(0,y); else window.scrollTo(0,0);
+  lastView = view;
+}
+function go(v){ view = v; if(v==="home"){curProj=null;} if(v!=="room") curRoom=null; arrangeSel=null; render(); }
+
+function rTopbar(){
+  let left = "";
+  if(view==="project") left = `<button class="tb-btn left" onclick="go('home')">‹ SURVEYS</button>`;
+  else if(view==="room") left = `<button class="tb-btn left" onclick="go('project')">‹ ROOMS</button>`;
+  else if(view==="arrange"||view==="review") left = `<button class="tb-btn left" onclick="go('project')">‹ BACK</button>`;
+  else left = `<span class="wordmark">SITEWALK</span>`;
+  const mid = view==="home" ? "" : `<span class="wordmark">SITEWALK</span>`;
+  return left + mid + `<button class="tb-btn" onclick="openSheet()">TV SIZES</button>`;
+}
+function rBottombar(){
+  let h = "";
+  if(view==="project") h = `<button class="btn primary block" onclick="startAddRoom()">＋ ADD ROOM</button>`;
+  else if(view==="room") h = `<button class="btn" style="flex:1" onclick="go('project')">DONE</button>
+    <button class="btn primary" style="flex:2" onclick="startAddRoom()">NEXT ROOM →</button>`;
+  else if(view==="arrange") h = `<button class="btn primary block" onclick="go('project')">DONE ARRANGING</button>`;
+  else if(view==="review") h = `<button class="btn" style="flex:1" onclick="go('project')">BACK</button>
+    <button class="btn primary" style="flex:1" onclick="window.print()">PRINT / PDF</button>`;
+  return h ? `<div class="inner">${h}</div>` : "";
+}
+
+const chiprow = (list, current, fn, extra) => `<div class="chips">` +
+  list.map(v=>`<div class="chip ${current===v?"on":""}" onclick="${fn}('${esc(v)}')">${esc(v)}</div>`).join("") + (extra||"") + `</div>`;
+const multirow = (list, arr, fn) => `<div class="chips">` +
+  list.map(v=>`<div class="chip ${arr.includes(v)?"on":""}" onclick="${fn}('${esc(v)}')">${esc(v)}</div>`).join("") + `</div>`;
+const stepper = (val, fn) =>
+  `<div class="stepper"><button onclick="${fn}(-1)">−</button><div class="val">${val}</div><button onclick="${fn}(1)">＋</button></div>`;
+
+/* ============ home ============ */
+function rHome(){
+  let h = `<div style="margin:14px 0 20px">
+    <div style="font-size:22px; font-weight:500;">Site surveys</div>
+    <div class="muted" style="margin-top:3px">Rooms, distribution, network, cameras — then export.</div></div>
+    <div class="row">
+      <button class="btn primary grow" onclick="createProject()">＋ NEW SURVEY</button>
+      <button class="btn" onclick="$('importfile').click()">IMPORT</button>
+      <input type="file" id="importfile" accept=".json,application/json" style="display:none" onchange="importJSON(this)">
+    </div><h2>On file</h2>`;
+  if(!projects.length) h += `<div class="empty">No surveys.<br>Start at the front door.</div>`;
+  projects.forEach(p=>{
+    const fl = projFlags(p).length;
+    h += `<div class="item" onclick="openProject('${p.id}')">
+      <div class="grow"><div class="title">${esc(p.client)||"Untitled"}</div>
+      <div class="sub">${esc(p.address)}${p.address?" · ":""}${p.rooms.length} rooms · ${esc(p.date)}${fl?` · <span style="color:var(--orange)">⚑ ${fl}</span>`:""}</div></div>
+      <button class="icon-btn" title="Duplicate" onclick="event.stopPropagation();dupProject('${p.id}',false)">⧉</button>
+      <button class="icon-btn" onclick="event.stopPropagation();delProject('${p.id}')">✕</button></div>`;
+  });
+  h += `<div class="empty" style="padding-top:40px">Safari → Share → Add to Home Screen<br>to run like an app on site.</div>`;
+  return h;
+}
+
+/* ============ project ============ */
+function rProject(){
+  const p = proj();
+  const flags = projFlags(p);
+  let h = `<div class="card">
+    <label class="fld">Client</label><input type="text" value="${esc(p.client)}" placeholder="Client name" oninput="upP('client',this.value)">
+    <label class="fld">Address</label><input type="text" value="${esc(p.address)}" placeholder="Street address" oninput="upP('address',this.value)">
+    <div class="grid2"><div><label class="fld">Date</label><input type="date" value="${esc(p.date)}" oninput="upP('date',this.value)"></div>
+    <div><label class="fld">Revision of</label><div class="muted mono" style="padding:12px 0">${p.client?esc(p.client):"—"}</div></div></div>
+    <label class="fld">Job type</label>${chiprow(JOB_TYPES, p.jobType, "setJobType")}
+    <label class="fld">Control system</label>${chiprow(CONTROL_SYSTEMS, p.controlSystem, "setCS")}
+  </div>`;
+  if(flags.length){
+    h += `<div class="flags"><div class="ftitle">⚑ OPEN — ${flags.length}</div>` +
+      flags.map(f=>`<div class="fitem" onclick="${f.roomId?`jumpRoom('${f.roomId}')`:""}">${esc(f.room)} <span>— ${esc(f.label)}</span></div>`).join("") + `</div>`;
+  }
+  h += `<h2>Rooms (${p.rooms.length})${p.rooms.length>1?`<span class="h2btn" onclick="go('arrange')">ARRANGE</span>`:""}</h2>`;
+  if(!p.rooms.length) h += `<div class="empty">No rooms. Start at the front door.</div>`;
+  const grouped = p.rooms.some(r=>r.floor);
+  const renderRow = (r) => {
+    const i = p.rooms.indexOf(r), fl = roomFlags(p,r).length;
+    return `<div class="item" onclick="openRoom('${r.id}')">
+      <div class="idx ${fl?"flag":""}">${String(i+1).padStart(2,"0")}</div>
+      <div class="grow"><div class="title">${esc(r.name)||"Unnamed"}</div><div class="sub">${esc(roomSummary(p,r))}</div></div>
+      <button class="icon-btn" title="Duplicate" onclick="event.stopPropagation();dupRoom('${r.id}')">⧉</button>
+      <button class="icon-btn" onclick="event.stopPropagation();delRoom('${r.id}')">✕</button></div>`;
+  };
+  if(grouped){
+    [...FLOORS,""].forEach(f=>{
+      const rooms = p.rooms.filter(r=>(r.floor||"")===f);
+      if(!rooms.length) return;
+      h += `<div class="rev-floor" style="margin:14px 0 7px">${f||"Unassigned"}</div>` + rooms.map(renderRow).join("");
+    });
+  } else h += p.rooms.map(renderRow).join("");
+
+  h += `<h2>Rack &amp; distribution</h2><div class="card">
+    <label class="fld">Rack / head-end location</label>
+    <input type="text" value="${esc(p.rack.location)}" placeholder="e.g. Mechanical room, AV closet" oninput="upRack('location',this.value)">
+    <label class="fld">Rack sources</label>
+    <div class="chips" style="margin-bottom:8px"><div class="chip ${p.rack.sourcesTBD?"on":""}" onclick="togTBD()">TBD — design later</div></div>`;
+  if(!p.rack.sourcesTBD){
+    h += RACK_SOURCES.map(s=>`<div class="steprow"><div class="slabel">${s}</div>${stepperSrc(s)}</div>`).join("");
+  }
+  h += `<label class="fld">Viewing habits (customer hints)</label>${multirow(HABITS, p.habits, "togHabit")}
+    <label class="fld">Rack notes</label>
+    <textarea placeholder="Existing rack? Size, power, cooling, conduit paths…" oninput="upRack('notes',this.value)">${esc(p.rack.notes)}</textarea>
+  </div>
+
+  <h2>Network</h2><div class="card">
+    <div class="grid2"><div><label class="fld">ISP / service</label>
+    <input type="text" value="${esc(p.network.isp)}" placeholder="e.g. Xfinity 1G" oninput="upNet('isp',this.value)"></div>
+    <div><label class="fld">Modem location</label>
+    <input type="text" value="${esc(p.network.modemLoc)}" placeholder="e.g. Basement" oninput="upNet('modemLoc',this.value)"></div></div>
+    <div class="steprow"><div class="slabel">Wireless access points</div>${stepper(p.network.waps,"stepWaps")}</div>
+    <div class="steprow"><div class="slabel">Extra wired drops</div>${stepper(p.network.drops,"stepDrops")}</div>
+    <label class="fld">Network notes</label>
+    <textarea placeholder="Existing gear, dead zones, conduit…" oninput="upNet('notes',this.value)">${esc(p.network.notes)}</textarea>
+  </div>
+
+  <h2>Cameras (${p.cameras.length})</h2>`;
+  p.cameras.forEach(c=>{
+    h += `<div class="card"><div class="row">
+      <div class="grow"><input type="text" value="${esc(c.location)}" placeholder="Location (e.g. Front door)" oninput="upCam('${c.id}','location',this.value)"></div>
+      <select onchange="upCam('${c.id}','type',this.value)" style="font-size:14px; background:var(--surface); color:var(--ink); border:1px solid var(--line2); border-radius:2px; padding:10px 6px;">
+      ${CAM_TYPES.map(t=>`<option ${c.type===t?"selected":""}>${t}</option>`).join("")}</select>
+      <button class="icon-btn" onclick="delCam('${c.id}')">✕</button></div></div>`;
+  });
+  h += `<button class="btn block small" onclick="addCam()">＋ ADD CAMERA</button>
+
+  <h2>Build sheet</h2><div class="card"><table class="tally">` +
+    buildSheet(p).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="tv ${String(v).includes("TBD")?"twarn":""}">${esc(v)}</td></tr>`).join("") +
+  `</table></div>
+
+  <h2>Project notes</h2><div class="card">
+    <textarea style="min-height:95px" placeholder="Customer wishlist, budget hints, anything random…" oninput="upP('notes',this.value)">${esc(p.notes)}</textarea></div>
+
+  <h2>Output</h2><div class="card">
+    <div class="row" style="flex-wrap:wrap">
+      <button class="btn grow" onclick="go('review')">REVIEW &amp; PRINT</button>
+      <button class="btn grow" onclick="exportCSV()">CSV</button>
+      <button class="btn grow" onclick="exportJSON()">JSON</button>
+      <button class="btn grow" onclick="copySummary()">COPY TEXT</button></div>
+    <div class="muted mono" style="margin-top:10px; font-size:11.5px">BACKED UP: ${p.lastBackup ? esc(p.lastBackup) : "NEVER — export JSON to back up"}</div>
+  </div>
+
+  <div class="row" style="margin-top:16px">
+    <button class="btn grow small" onclick="dupProject('${p.id}',true)">⧉ DUPLICATE AS REVISION</button>
+    <button class="btn danger grow small" onclick="delProject('${p.id}')">DELETE SURVEY</button></div>`;
+  return h;
+}
+
+/* ============ room ============ */
+function rRoom(){
+  const p = proj(), r = room(), a = aMeta(r.audio);
+  const flags = roomFlags(p,r);
+  const idx = String(p.rooms.indexOf(r)+1).padStart(2,"0");
+  let h = `<div class="card"><div class="row">
+      <span class="idx ${flags.length?"flag":""}" style="font-size:14px">${idx}</span>
+      <div class="grow"><input type="text" value="${esc(r.name)}" placeholder="Room name" oninput="upR('name',this.value)"></div>
+      <button class="icon-btn" style="font-size:19px; ${r.flagged?"color:var(--orange)":""}" title="Flag for follow-up" onclick="togFlag()">⚑</button></div>
+    <label class="fld">Floor</label>${chiprow(FLOORS, r.floor, "setFloor")}</div>`;
+
+  /* TV */
+  h += `<h2>TV / display</h2><div class="card"><div class="chips">
+    <div class="chip ${r.tv?"on":""}" onclick="setR('tv',true)">TV in this room</div>
+    <div class="chip ${!r.tv?"on":""}" onclick="setR('tv',false)">No TV</div>
+    <div class="chip ${r.isTheater?"on":""}" onclick="setR('isTheater',${!r.isTheater})">Theater details</div></div>`;
+  if(r.isTheater){
+    h += `<label class="fld">Display</label>${chiprow(["Projector","Large-format panel"], r.thDisplay, "setTh")}`;
+    if(r.thDisplay==="Projector"){
+      h += `<label class="fld">Screen size (in, diagonal)</label>
+        <input type="number" inputmode="numeric" value="${esc(r.thScreen)}" placeholder='e.g. 120' oninput="upR('thScreen',this.value)">`;
+    }
+    h += `<div class="grid2" style="margin-top:6px">
+      <div><label class="fld">Seating rows</label>${stepper(r.thRows,"stepRows")}</div>
+      <div><label class="fld">Seats</label>${stepper(r.thSeats,"stepSeats")}</div></div>
+      <div class="chips" style="margin-top:12px">
+      <div class="chip ${r.riser?"on":""}" onclick="setR('riser',${!r.riser})">Riser</div>
+      <div class="chip ${r.acoustic?"on":""}" onclick="setR('acoustic',${!r.acoustic})">Acoustic treatment</div></div>`;
+  }
+  const showPanel = r.tv && !(r.isTheater && r.thDisplay==="Projector");
+  if(showPanel){
+    h += `<label class="fld">Screen size</label><div class="chips">` +
+      TV_SIZES.map(s=>`<div class="chip ${String(r.tvSize)===String(s)?"on":""}" onclick="setSize('${s}')">${s}</div>`).join("") +
+      `<div class="chip ${r.tvSize===""?"warn":""}" onclick="setSize('')">TBD</div></div>
+      <label class="fld">TV status</label>${chiprow(STATUS3, r.tvStatus, "setTvStatus")}
+      <label class="fld">Mounting</label>${chiprow(MOUNTS, r.mount, "setMount")}
+      <div class="chips" style="margin-top:12px"><div class="chip ${r.fireplace?"on":""}" onclick="setR('fireplace',${!r.fireplace})">Above fireplace</div></div>`;
+    if(r.fireplace){
+      h += `<div class="grid2" style="margin-top:10px">
+        <input type="number" inputmode="decimal" value="${esc(r.fpW)}" placeholder="Fireplace W (in)" oninput="upR('fpW',this.value)">
+        <input type="number" inputmode="decimal" value="${esc(r.fpH)}" placeholder="Fireplace H (in)" oninput="upR('fpH',this.value)"></div>
+        <div style="margin-top:10px"><input type="number" inputmode="decimal" value="${esc(r.fpMantel)}" placeholder="Mantel height off floor (in)" oninput="upR('fpMantel',this.value)"></div>`;
+    }
+    h += `<label class="fld">Wall size → recommended TV</label><div class="grid2">
+      <input type="number" inputmode="decimal" step="0.5" value="${esc(r.wallW)}" placeholder="Wall width (ft)" oninput="upR('wallW',this.value);upCalc()">
+      <input type="number" inputmode="decimal" step="0.5" value="${esc(r.wallH)}" placeholder="Wall height (ft)" oninput="upR('wallH',this.value);upCalc()"></div>
+      <div id="tvcalc">${calcHTML(r)}</div>`;
+  }
+  h += `</div>`;
+
+  /* audio */
+  h += `<h2>Audio</h2><div class="card">`;
+  if(r.landscape){
+    h += `<div class="chips" style="margin-bottom:4px"><div class="chip on" onclick="setR('landscape',false)">Landscape audio ✕</div></div>
+      <div class="steprow"><div class="slabel">Satellite speakers</div>${stepper(r.satCount,"stepSats")}</div>
+      <div class="chips" style="margin-top:8px"><div class="chip ${r.buriedSub?"on":""}" onclick="setR('buriedSub',${!r.buriedSub})">Buried subwoofer</div></div>`
+      + zoneRow(p,r);
+  } else {
+    h += `<div class="chips">` + AUDIO.map(o=>`<div class="chip ${r.audio===o.id?"on":""}" onclick="setAudio('${o.id}')">${o.label}</div>`).join("") + `</div>`;
+    if(a.spk) h += `<label class="fld">Speaker type</label>${chiprow(SPK_TYPES, r.spkType, "setSpk")}`;
+    if(a.id!=="none" && a.id!=="tv") h += `<label class="fld">Audio status</label>${chiprow(STATUS3, r.audStatus, "setAudStatus")}`;
+    if(a.sub) h += `<label class="fld">Subwoofer location</label>${chiprow(SUB_LOCS, r.subLoc, "setSub")}`;
+    if(a.stereo){
+      h += `<label class="fld">Fed by</label><div class="chips">
+        <div class="chip ${r.audioFeed==="house"?"on":""}" onclick="setFeed('house')">House amp @ rack</div>
+        <div class="chip ${r.audioFeed==="local"?"on":""}" onclick="setFeed('local')">Local amp</div></div>`;
+      if(r.audioFeed==="house") h += zoneRow(p,r);
+    }
+    if(a.avr) h += `<div class="badge">AVR REQUIRED</div>`;
+    if(a.stereo && r.audioFeed==="local") h += `<div class="badge">AMP REQUIRED</div>`;
+  }
+  h += `</div>`;
+
+  /* video source */
+  h += `<h2>Video source</h2><div class="card"><div class="chips">
+    <div class="chip ${r.videoFeed==="matrix"?"on":""}" onclick="setVF('matrix')">On system (matrix)</div>
+    <div class="chip ${r.videoFeed==="local"?"on":""}" onclick="setVF('local')">Off system (local)</div>
+    <div class="chip ${r.videoFeed==="none"?"on":""}" onclick="setVF('none')">No source</div></div>`;
+  if(r.videoFeed==="local"){
+    h += `<label class="fld">Local sources</label>${multirow(LOCAL_SOURCES, r.localSources, "togSource")}
+      <label class="fld">Gear location</label>${chiprow(EQUIP_LOCS, r.equipLoc, "setEquip")}`;
+  }
+  h += `</div>`;
+
+  /* control */
+  const resolved = ctrlOf(p,r);
+  h += `<h2>Control</h2><div class="card"><div class="chips">` +
+    CONTROLS.map(c=>`<div class="chip ${resolved===c?"on":""}" onclick="setCtrl('${c}')">${c}</div>`).join("") +
+    `</div>${r.control===""?`<div class="muted mono" style="margin-top:9px; font-size:11.5px">AUTO — follows on/off system</div>`:""}</div>`;
+
+  /* wiring */
+  h += `<h2>Wiring</h2><div class="card"><div class="chips">` +
+    WIRING.map(([id,l])=>`<div class="chip ${r.wiring===id?"on":""}" onclick="setWiring('${id}')">${l}</div>`).join("") + `</div>
+    <label class="fld">In place now (tap to count)</label><div class="chips">` +
+    EXW.map(([k,l])=>{ const n=r.exw[k]||0;
+      return `<div class="chip ${n?"on":""}" onclick="cycleExw('${k}')">${l}${n?` <span style="font-family:var(--mono)">×${n}</span>`:""}</div>`; }).join("") +
+    `</div></div>`;
+
+  /* notes + actions */
+  h += `<h2>Room notes</h2><div class="card">
+    <textarea placeholder="Customer requests, quirks, existing gear…" oninput="upR('notes',this.value)">${esc(r.notes)}</textarea></div>
+    <div class="row" style="margin-top:14px; flex-wrap:wrap">
+      <button class="btn small grow" onclick="secondTV('${r.id}')">⧉ 2ND TV HERE</button>
+      <button class="btn small grow" onclick="dupRoom('${r.id}')">⧉ DUPLICATE</button>
+      <button class="btn small grow" onclick="savePreset()">SAVE AS PRESET</button>
+      <button class="btn small danger grow" onclick="delRoom('${r.id}')">DELETE</button></div>`;
+  return h;
+}
+function zoneRow(p, r){
+  const zones = [...new Set(p.rooms.filter(x=>x.id!==r.id && isHouseFed(x)).map(zoneOf))];
+  const cur = zoneOf(r);
+  let h = `<label class="fld">Audio zone</label><div class="chips">
+    <div class="chip ${!r.zoneName||r.zoneName===r.name?"on":""}" onclick="setZone('')">Own zone${r.name?` (${esc(r.name)})`:""}</div>` +
+    zones.map(z=>`<div class="chip ${r.zoneName===z?"on":""}" onclick="setZone('${esc(z)}')">Join: ${esc(z)}</div>`).join("") + `</div>`;
+  return h;
+}
+function calcHTML(r){
+  const c = tvCalc(r);
+  if(!c) return `<div class="calc" style="color:var(--muted)">Enter wall width for a recommendation.</div>`;
+  if(!c.size) return `<div class="calc">Wall too tight for a 32&quot; panel with breathing room.</div>`;
+  return `<div class="calc">WALL ${esc(r.wallW)}′${r.wallH?` × ${esc(r.wallH)}′`:""} → REC <b>${c.size}″</b> &nbsp;${c.tw}w × ${c.th}h, ~8″ clear each side</div>`;
+}
+function upCalc(){ const el=$("tvcalc"); if(el) el.innerHTML = calcHTML(room()); }
+
+/* ============ arrange ============ */
+function rArrange(){
+  const p = proj();
+  let h = `<div class="muted" style="margin:6px 0 14px">Tap a room, then tap a floor to move it. Use ↑↓ to reorder.</div>`;
+  [...FLOORS,""].forEach(f=>{
+    h += `<div class="rev-floor" style="cursor:pointer; padding:9px 0 6px; ${arrangeSel?"color:var(--orange)":""}"
+      onclick="moveToFloor('${f}')">${f||"Unassigned"}${arrangeSel?" ← move here":""}</div>`;
+    p.rooms.filter(r=>(r.floor||"")===f).forEach(r=>{
+      const i = p.rooms.indexOf(r);
+      h += `<div class="item ${arrangeSel===r.id?"sel":""}" onclick="arrangeSel=arrangeSel==='${r.id}'?null:'${r.id}';render()">
+        <div class="idx">${String(i+1).padStart(2,"0")}</div>
+        <div class="grow"><div class="title">${esc(r.name)||"Unnamed"}</div></div>
+        <button class="icon-btn" onclick="event.stopPropagation();nudge('${r.id}',-1)">↑</button>
+        <button class="icon-btn" onclick="event.stopPropagation();nudge('${r.id}',1)">↓</button></div>`;
+    });
+  });
+  return h;
+}
+function moveToFloor(f){
+  if(!arrangeSel) return;
+  const r = proj().rooms.find(x=>x.id===arrangeSel);
+  if(r){ r.floor = f; save(); }
+  arrangeSel = null; render();
+}
+function nudge(id, d){
+  const rooms = proj().rooms, i = rooms.findIndex(r=>r.id===id), j = i+d;
+  if(j<0 || j>=rooms.length) return;
+  [rooms[i],rooms[j]] = [rooms[j],rooms[i]]; save(); render();
+}
+
+/* ============ review ============ */
+function rReview(){
+  const p = proj(), flags = projFlags(p);
+  let h = `<div style="padding-top:8px">
+    <div style="font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--muted)">SITE SURVEY</div>
+    <div style="font-size:21px; font-weight:500; margin-top:4px">${esc(p.client)||"Untitled"}</div>
+    <div class="muted">${esc(p.address)}${p.address?" · ":""}${esc(p.date)}${p.jobType?" · "+esc(p.jobType):""}${p.controlSystem&&p.controlSystem!=="None"?" · "+esc(p.controlSystem):""}</div>
+    <div class="rule"></div></div>`;
+  if(flags.length){
+    h += `<div class="flags" style="margin-top:16px"><div class="ftitle">⚑ OPEN ITEMS — RESOLVE BEFORE QUOTING</div>` +
+      flags.map(f=>`<div class="fitem">${esc(f.room)} <span>— ${esc(f.label)}</span></div>`).join("") + `</div>`;
+  }
+  const grouped = p.rooms.some(r=>r.floor);
+  const block = r => {
+    const a = aMeta(r.audio), lines = [];
+    if(r.isTheater) lines.push("Theater — " + (r.thDisplay||'<span class="tbd">display TBD ⚑</span>') +
+      (r.thDisplay==="Projector" ? ", " + (r.thScreen?r.thScreen+'″ screen':'<span class="tbd">screen TBD ⚑</span>') : "") +
+      ` · ${r.thRows} row${r.thRows>1?"s":""}, ${r.thSeats} seats${r.riser?", riser":""}${r.acoustic?", acoustic treatment":""}`);
+    if(r.tv && !(r.isTheater&&r.thDisplay==="Projector"))
+      lines.push("TV: " + (r.tvSize?r.tvSize+"″":'<span class="tbd">size TBD ⚑</span>') + " — " + r.mount.toLowerCase() +
+        (r.fireplace?" above fireplace":"") + (r.tvStatus!=="New"?" ("+r.tvStatus.toLowerCase()+")":""));
+    if(r.landscape) lines.push(`Landscape audio: ${r.satCount} satellites${r.buriedSub?" + buried sub":""} — zone “${esc(zoneOf(r))}”`);
+    else if(a.id!=="none"&&a.id!=="tv"){
+      let s = "Audio: " + a.label;
+      if(a.spk) s += " — " + r.spkType.toLowerCase();
+      if(a.sub) s += ", sub " + r.subLoc.toLowerCase();
+      if(a.stereo) s += r.audioFeed==="house" ? ` — zone “${esc(zoneOf(r))}”` : " — local amp";
+      if(a.avr) s += " — AVR";
+      if(r.audStatus!=="New") s += " ("+r.audStatus.toLowerCase()+")";
+      lines.push(s);
+    }
+    if(r.tv||r.videoFeed!=="none") lines.push("Source: " + (r.videoFeed==="matrix"?"on system":
+      r.videoFeed==="local"?("off system — "+(r.localSources.join(", ")||"?")+" @ "+r.equipLoc.toLowerCase()):"none") +
+      " · control: " + ctrlOf(p,r).toLowerCase());
+    const wir = r.wiring ? wLabel(r.wiring) : (needsInfra(r)?'<span class="tbd">wiring TBD ⚑</span>':"");
+    const ex = EXW.filter(([k])=>r.exw[k]>0).map(([k,l])=>l+(r.exw[k]>1?" ×"+r.exw[k]:"")).join(", ");
+    if(wir||ex) lines.push("Wiring: " + [wir, ex?("in place: "+ex):""].filter(Boolean).join(" · "));
+    return `<div class="rev-room"><div class="rname">${esc(r.name)||"Unnamed"}</div>` +
+      lines.map(l=>`<div class="rline">${l}</div>`).join("") +
+      (r.notes?`<div class="rnote">${esc(r.notes)}</div>`:"") + `</div>`;
+  };
+  if(grouped) [...FLOORS,""].forEach(f=>{
+    const rooms = p.rooms.filter(r=>(r.floor||"")===f);
+    if(rooms.length) h += `<div class="rev-floor">${f||"Unassigned"}</div>` + rooms.map(block).join("");
+  });
+  else h += p.rooms.map(block).join("");
+  h += `<h2>Build sheet</h2><table class="tally">` +
+    buildSheet(p).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="tv ${String(v).includes("TBD")?"twarn":""}">${esc(v)}</td></tr>`).join("") + `</table>`;
+  const net = [p.network.isp&&("ISP: "+p.network.isp), p.network.modemLoc&&("modem: "+p.network.modemLoc),
+    (+p.network.waps>0)&&(p.network.waps+" WAPs"), (+p.network.drops>0)&&(p.network.drops+" drops")].filter(Boolean).join(" · ");
+  if(net||p.network.notes) h += `<h2>Network</h2><div style="font-size:14px; line-height:1.6">${esc(net)}${p.network.notes?`<div class="muted">${esc(p.network.notes)}</div>`:""}</div>`;
+  if(p.cameras.length) h += `<h2>Cameras (${p.cameras.length})</h2><div style="font-size:14px; line-height:1.7">` +
+    p.cameras.map(c=>esc(c.location||"?")+" — "+esc(c.type)).join("<br>") + `</div>`;
+  if(p.rack.location||p.rack.notes) h += `<h2>Head-end</h2><div style="font-size:14px; line-height:1.6">${esc(p.rack.location)}${p.rack.notes?`<div class="muted">${esc(p.rack.notes)}</div>`:""}</div>`;
+  if(p.notes) h += `<h2>Project notes</h2><div style="font-size:14px; line-height:1.6">${esc(p.notes)}</div>`;
+  h += `<div class="muted mono no-print" style="margin-top:26px; font-size:11px">SITEWALK · ${esc(p.date)}</div>`;
+  return h;
+}
+
+/* ============ overlays ============ */
+function overlay(html){ $("overlay-inner").innerHTML = html; $("overlay").style.display = "block"; $("overlay").scrollTop = 0; }
+function closeOverlay(){ $("overlay").style.display = "none"; }
+
+function startAddRoom(){
+  const p = proj(); if(!p) return;
+  let h = `<div class="ovh"><span class="t">NEW ROOM — NAME</span><span class="c" onclick="closeOverlay()">CANCEL ✕</span></div>
+    <div class="namegrid">` +
+    ROOM_NAMES.map(n=>`<div class="chip" onclick="pickName('${esc(n)}')">${esc(n)}</div>`).join("") + `</div>
+    <label class="fld" style="margin-top:18px">Or type one</label>
+    <div class="row"><input type="text" id="customname" placeholder="Room name">
+    <button class="btn" onclick="pickName($('customname').value||'Room')">ADD</button></div>`;
+  overlay(h);
+}
+function pickName(base){
+  const p = proj();
+  const taken = p.rooms.filter(r=>r.name===base || r.name.startsWith(base+" ")).length;
+  const name = taken ? base+" "+(taken+1) : base;
+  const r = newRoom(p, name);
+  if(/theater|cinema|media/i.test(name)) r.isTheater = true;
+  p.rooms.push(r); curRoom = r.id; save();
+  pickPresetOverlay();
+}
+function pickPresetOverlay(){
+  let h = `<div class="ovh"><span class="t">APPLY PRESET</span><span class="c" onclick="finishAdd()">SKIP — BLANK</span></div>
+    <div class="namegrid" style="grid-template-columns:1fr">` +
+    STARTER_PRESETS.map((pr,i)=>`<div class="chip" style="justify-content:flex-start" onclick="applyPreset(${i},false)">${esc(pr.name)}</div>`).join("") +
+    customPresets.map((pr,i)=>`<div class="chip" style="justify-content:space-between" onclick="applyPreset(${i},true)">${esc(pr.name)}<span class="x" onclick="event.stopPropagation();delPreset(${i})">✕ </span></div>`).join("") +
+    `</div>`;
+  overlay(h);
+}
+function applyPreset(i, custom){
+  const cfg = (custom ? customPresets[i] : STARTER_PRESETS[i]).cfg;
+  Object.assign(room(), JSON.parse(JSON.stringify(cfg)));
+  save(); finishAdd();
+}
+function finishAdd(){ closeOverlay(); view = "room"; render(); }
+function delPreset(i){ customPresets.splice(i,1); savePresets(); pickPresetOverlay(); }
+function savePreset(){
+  const r = room();
+  const name = prompt("Preset name:", r.name || "My preset");
+  if(!name) return;
+  const cfg = JSON.parse(JSON.stringify(r));
+  delete cfg.id; delete cfg.name; delete cfg.notes; delete cfg.flagged; delete cfg.floor;
+  delete cfg.wallW; delete cfg.wallH; delete cfg.exw; delete cfg.wiring;
+  delete cfg.fpW; delete cfg.fpH; delete cfg.fpMantel; delete cfg.zoneName;
+  const ix = customPresets.findIndex(x=>x.name===name);
+  if(ix>=0) customPresets[ix] = {name, cfg}; else customPresets.push({name, cfg});
+  savePresets(); toast("Preset saved: " + name);
+}
+
+function openSheet(){
+  const fromRoom = view==="room";
+  let h = `<div class="ovh"><span class="t">TV DIMENSIONS — 16:9 PANELS, INCHES</span><span class="c" onclick="closeOverlay()">CLOSE ✕</span></div>
+    <table class="sheet-table" style="margin-top:6px"><tr><th>Size</th><th>Width</th><th>Height</th></tr>` +
+    TV_SIZES.map(s=>`<tr class="${fromRoom?"tap":""}" ${fromRoom?`onclick="sheetPick(${s})"`:""}>
+      <td>${s}″</td><td>${SHEET_DISP[s][0]}″</td><td>${SHEET_DISP[s][1]}″</td></tr>`).join("") + `</table>` +
+    (fromRoom ? `<div class="muted mono" style="margin-top:14px; font-size:11.5px">TAP A ROW TO SET THIS ROOM'S TV</div>` : "");
+  overlay(h);
+}
+function sheetPick(s){ const r=room(); if(r){ r.tvSize=String(s); save(); } closeOverlay(); render(); }
+
+/* ============ actions ============ */
+function createProject(){ const p=newProj(); projects.unshift(p); curProj=p.id; go("project"); save(); }
+function openProject(id){ curProj=id; go("project"); }
+function jumpRoom(id){ curRoom=id; view="room"; render(); }
+function openRoom(id){ curRoom=id; view="room"; render(); }
+function delProject(id){
+  const p = projects.find(x=>x.id===id);
+  if(!confirm(`Delete survey "${(p&&p.client)||"Untitled"}"? This can't be undone.`)) return;
+  projects = projects.filter(x=>x.id!==id); save(); go("home");
+}
+function dupProject(id, asRev){
+  const src = projects.find(x=>x.id===id); if(!src) return;
+  const copy = JSON.parse(JSON.stringify(src));
+  copy.id = uid(); copy.lastBackup = "";
+  copy.rooms.forEach(r=>r.id=uid()); copy.cameras.forEach(c=>c.id=uid());
+  if(asRev){
+    const m = (copy.client||"").match(/^(.*) — Rev (\d+)$/);
+    copy.client = m ? `${m[1]} — Rev ${+m[2]+1}` : `${copy.client||"Untitled"} — Rev 2`;
+  } else copy.client = (copy.client||"Untitled") + " copy";
+  projects.unshift(copy); save();
+  if(asRev){ curProj = copy.id; go("project"); } else render();
+  toast(asRev ? "Revision created" : "Survey duplicated");
+}
+function upP(f,v){ proj()[f]=v; save(); }
+function setJobType(v){ const p=proj(); p.jobType = p.jobType===v?"":v; save(); render(); }
+function setCS(v){ const p=proj(); p.controlSystem = p.controlSystem===v?"":v; save(); render(); }
+function togHabit(v){ const p=proj(); p.habits = p.habits.includes(v)?p.habits.filter(x=>x!==v):[...p.habits,v]; save(); render(); }
+function upRack(f,v){ proj().rack[f]=v; save(); }
+function togTBD(){ const rk=proj().rack; rk.sourcesTBD=!rk.sourcesTBD; save(); render(); }
+function stepperSrc(s){
+  return `<div class="stepper"><button onclick="stepSrc('${esc(s)}',-1)">−</button><div class="val">${proj().rack.sources[s]||0}</div><button onclick="stepSrc('${esc(s)}',1)">＋</button></div>`;
+}
+function stepSrc(s,d){ const rk=proj().rack; rk.sources[s]=Math.max(0,(+rk.sources[s]||0)+d); save(); render(); }
+function upNet(f,v){ proj().network[f]=v; save(); }
+function stepWaps(d){ const n=proj().network; n.waps=Math.max(0,(+n.waps||0)+d); save(); render(); }
+function stepDrops(d){ const n=proj().network; n.drops=Math.max(0,(+n.drops||0)+d); save(); render(); }
+function addCam(){ proj().cameras.push({id:uid(),location:"",type:"Turret"}); save(); render(); }
+function upCam(id,f,v){ const c=proj().cameras.find(x=>x.id===id); if(c){c[f]=v; save();} }
+function delCam(id){ const p=proj(); p.cameras=p.cameras.filter(x=>x.id!==id); save(); render(); }
+
+function upR(f,v){ room()[f]=v; save(); }
+function setR(f,v){ room()[f]=v; save(); render(); }
+function setFloor(v){ const r=room(); r.floor = r.floor===v?"":v; save(); render(); }
+function togFlag(){ const r=room(); r.flagged=!r.flagged; save(); render(); }
+function setSize(v){ room().tvSize=v; save(); render(); }
+function setTvStatus(v){ room().tvStatus=v; save(); render(); }
+function setMount(v){ room().mount=v; save(); render(); }
+function setTh(v){ room().thDisplay=v; save(); render(); }
+function stepRows(d){ const r=room(); r.thRows=Math.max(1,(+r.thRows||1)+d); save(); render(); }
+function stepSeats(d){ const r=room(); r.thSeats=Math.max(1,(+r.thSeats||1)+d); save(); render(); }
+function stepSats(d){ const r=room(); r.satCount=Math.max(2,(+r.satCount||2)+d); save(); render(); }
+function setAudio(v){ room().audio=v; save(); render(); }
+function setSpk(v){ room().spkType=v; save(); render(); }
+function setAudStatus(v){ room().audStatus=v; save(); render(); }
+function setSub(v){ room().subLoc=v; save(); render(); }
+function setFeed(v){ room().audioFeed=v; save(); render(); }
+function setZone(v){ room().zoneName=v; save(); render(); }
+function setVF(v){ room().videoFeed=v; save(); render(); }
+function togSource(v){ const r=room(); r.localSources = r.localSources.includes(v)?r.localSources.filter(x=>x!==v):[...r.localSources,v]; save(); render(); }
+function setEquip(v){ room().equipLoc=v; save(); render(); }
+function setCtrl(v){ const r=room(); const p=proj(); r.control = (v===autoControl(p,{...r,control:""}) && r.control==="") ? "" : (r.control===v ? "" : v); save(); render(); }
+function setWiring(v){ const r=room(); r.wiring = r.wiring===v?"":v; save(); render(); }
+function cycleExw(k){ const r=room(); r.exw[k]=((r.exw[k]||0)+1)%4; save(); render(); }
+
+function dupRoom(id){
+  const p=proj(), src=p.rooms.find(x=>x.id===id); if(!src) return;
+  const copy = JSON.parse(JSON.stringify(src));
+  copy.id = uid(); copy.name = src.name ? src.name+" (copy)" : "";
+  p.rooms.splice(p.rooms.indexOf(src)+1, 0, copy); save(); render();
+  toast("Room duplicated");
+}
+function secondTV(id){
+  const p=proj(), src=p.rooms.find(x=>x.id===id); if(!src) return;
+  const copy = JSON.parse(JSON.stringify(src));
+  copy.id = uid(); copy.name = (src.name||"Room")+" (TV 2)";
+  copy.audio="none"; copy.notes="";
+  p.rooms.splice(p.rooms.indexOf(src)+1, 0, copy); save();
+  curRoom = copy.id; render(); toast("Second TV added");
+}
+function delRoom(id){
+  const p=proj(), i=p.rooms.findIndex(x=>x.id===id); if(i<0) return;
+  const r = p.rooms[i];
+  p.rooms.splice(i,1); save();
+  if(curRoom===id){ curRoom=null; view="project"; }
+  render();
+  toast(`Deleted ${r.name||"room"}`, ()=>{ p.rooms.splice(i,0,r); save(); render(); });
+}
+
+/* ============ export ============ */
+function fileBase(){
+  const p=proj();
+  return ((p.client||"survey").replace(/[^\w\- ]/g,"").trim().replace(/\s+/g,"-")||"survey")+"-"+p.date;
+}
+const cell = s => { s=String(s==null?"":s); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
+function exwStr(r){ return EXW.filter(([k])=>r.exw[k]>0).map(([k,l])=>l+(r.exw[k]>1?" x"+r.exw[k]:"")).join("; "); }
+
+function buildCSV(){
+  const p=proj(), rows=[];
+  rows.push(["SITEWALK SURVEY"]);
+  rows.push(["Client",p.client],["Address",p.address],["Date",p.date],["Job type",p.jobType],
+    ["Control system",p.controlSystem],["Viewing habits",p.habits.join("; ")],[]);
+  const flags = projFlags(p);
+  rows.push(["OPEN ITEMS ("+flags.length+")"]);
+  flags.forEach(f=>rows.push(["⚑", f.room, f.label]));
+  rows.push([]);
+  rows.push(["Floor","Room","TV","Size","TV status","Mount","Fireplace","Wall WxH ft","Theater","Audio","Spk type","Audio status","Sub","Fed by","Zone","Gear","Video","Local sources","Gear loc","Control","Wiring","In place","Notes","Flags"]);
+  p.rooms.forEach(r=>{
+    const a=aMeta(r.audio), fl=roomFlags(p,r);
+    rows.push([r.floor, r.name, r.tv?"Yes":"No",
+      r.isTheater&&r.thDisplay==="Projector" ? "PJ "+(r.thScreen||"TBD") : (r.tv?(r.tvSize||"TBD ⚑"):""),
+      r.tv?r.tvStatus:"", r.tv?r.mount:"", r.fireplace?("Yes "+[r.fpW&&r.fpW+"w",r.fpH&&r.fpH+"h",r.fpMantel&&"mantel "+r.fpMantel].filter(Boolean).join(" ")):"",
+      (r.wallW||r.wallH)?(r.wallW+" x "+r.wallH):"",
+      r.isTheater?[r.thDisplay,r.thRows+" rows",r.thSeats+" seats",r.riser&&"riser",r.acoustic&&"acoustic"].filter(Boolean).join("; "):"",
+      r.landscape?("Landscape "+r.satCount+" sat"+(r.buriedSub?" + buried sub":"")):a.label,
+      a.spk?r.spkType:"", (a.id!=="none"&&a.id!=="tv")?r.audStatus:"", a.sub?r.subLoc:"",
+      r.landscape?"House amp":(a.stereo?(r.audioFeed==="house"?"House amp":"Local amp"):""),
+      isHouseFed(r)?zoneOf(r):"", a.avr?"AVR":(a.stereo&&r.audioFeed==="local"?"Amp":""),
+      r.videoFeed==="matrix"?"On system":(r.videoFeed==="local"?"Off system":"None"),
+      r.videoFeed==="local"?r.localSources.join("; "):"", r.videoFeed==="local"?r.equipLoc:"",
+      ctrlOf(p,r), r.wiring?wLabel(r.wiring):(needsInfra(r)?"TBD ⚑":""), exwStr(r), r.notes, fl.join("; ")]);
+  });
+  rows.push([]);
+  rows.push(["BUILD SHEET"]);
+  buildSheet(p).forEach(([k,v])=>rows.push([k,v]));
+  rows.push([]);
+  rows.push(["RACK"],["Location",p.rack.location],["Sources",p.rack.sourcesTBD?"TBD":RACK_SOURCES.filter(s=>p.rack.sources[s]>0).map(s=>s+" x"+p.rack.sources[s]).join("; ")],["Notes",p.rack.notes]);
+  rows.push([]);
+  rows.push(["NETWORK"],["ISP",p.network.isp],["Modem",p.network.modemLoc],["WAPs",p.network.waps],["Drops",p.network.drops],["Notes",p.network.notes]);
+  rows.push([]);
+  rows.push(["CAMERAS"]);
+  p.cameras.forEach(c=>rows.push([c.location,c.type]));
+  rows.push([]);
+  rows.push(["PROJECT NOTES"],[p.notes]);
+  return rows.map(r=>r.map(cell).join(",")).join("\r\n");
+}
+function buildText(){
+  const p=proj(), L=[];
+  L.push("SITE SURVEY — "+(p.client||"Untitled"));
+  if(p.address) L.push(p.address);
+  L.push([p.date,p.jobType,p.controlSystem&&p.controlSystem!=="None"?p.controlSystem:""].filter(Boolean).join(" · "), "");
+  const flags = projFlags(p);
+  if(flags.length){
+    L.push("OPEN ITEMS ("+flags.length+")");
+    flags.forEach(f=>L.push("  ⚑ "+f.room+" — "+f.label));
+    L.push("");
+  }
+  L.push("ROOMS ("+p.rooms.length+")");
+  p.rooms.forEach((r,i)=>{
+    const a=aMeta(r.audio);
+    L.push((i+1)+". "+(r.name||"Unnamed")+(r.floor?" ["+r.floor+"]":""));
+    if(r.isTheater) L.push("   Theater: "+(r.thDisplay||"display TBD ⚑")+(r.thDisplay==="Projector"?" "+(r.thScreen?r.thScreen+'" screen':"screen TBD ⚑"):"")+", "+r.thRows+" rows / "+r.thSeats+" seats"+(r.riser?", riser":"")+(r.acoustic?", acoustic":""));
+    if(r.tv && !(r.isTheater&&r.thDisplay==="Projector")) L.push("   TV: "+(r.tvSize?r.tvSize+'"':"TBD ⚑")+" "+r.mount+(r.fireplace?" above fireplace":"")+(r.tvStatus!=="New"?" ("+r.tvStatus+")":""));
+    if(r.landscape) L.push("   Landscape audio: "+r.satCount+" sats"+(r.buriedSub?" + buried sub":"")+" — zone "+zoneOf(r));
+    else if(a.id!=="none"&&a.id!=="tv"){
+      let s="   Audio: "+a.label;
+      if(a.spk) s+=" "+r.spkType;
+      if(a.sub) s+=", sub "+r.subLoc;
+      if(a.stereo) s+= r.audioFeed==="house"?" — zone "+zoneOf(r):" — local amp";
+      if(a.avr) s+=" [AVR]";
+      L.push(s);
+    }
+    if(r.tv||r.videoFeed!=="none") L.push("   Video: "+(r.videoFeed==="matrix"?"on system":r.videoFeed==="local"?"off system — "+(r.localSources.join(", ")||"?")+" @ "+r.equipLoc:"none")+" · control: "+ctrlOf(p,r));
+    const wir = r.wiring?wLabel(r.wiring):(needsInfra(r)?"TBD ⚑":""), ex=exwStr(r);
+    if(wir||ex) L.push("   Wiring: "+[wir,ex?("in place: "+ex):""].filter(Boolean).join(" · "));
+    if(r.notes) L.push("   Notes: "+r.notes);
+  });
+  L.push("", "BUILD SHEET");
+  buildSheet(p).forEach(([k,v])=>L.push("   "+k+": "+v));
+  L.push("", "RACK: "+(p.rack.location||"—")+(p.rack.sourcesTBD?" · sources TBD":" · "+RACK_SOURCES.filter(s=>p.rack.sources[s]>0).map(s=>s+" x"+p.rack.sources[s]).join(", ")));
+  if(p.rack.notes) L.push("   "+p.rack.notes);
+  L.push("NETWORK: "+[p.network.isp,p.network.modemLoc&&"modem "+p.network.modemLoc,(+p.network.waps>0)&&p.network.waps+" WAPs",(+p.network.drops>0)&&p.network.drops+" drops"].filter(Boolean).join(" · "));
+  if(p.network.notes) L.push("   "+p.network.notes);
+  if(p.cameras.length){ L.push("CAMERAS ("+p.cameras.length+")"); p.cameras.forEach(c=>L.push("   "+(c.location||"?")+" — "+c.type)); }
+  if(p.notes) L.push("", "NOTES: "+p.notes);
+  return L.join("\n");
+}
+async function deliver(filename, text, mime){
+  const blob = new Blob([text], {type:mime});
+  const file = new File([blob], filename, {type:mime});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], title:filename}); return; }
+    catch(e){ if(e.name==="AbortError") return; }
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function exportCSV(){ deliver(fileBase()+".csv", buildCSV(), "text/csv"); }
+function exportJSON(){
+  const p = proj();
+  p.lastBackup = new Date().toISOString().slice(0,16).replace("T"," ");
+  save();
+  deliver(fileBase()+".json", JSON.stringify(p,null,2), "application/json");
+  render();
+}
+async function copySummary(){
+  const text = buildText();
+  try{ await navigator.clipboard.writeText(text); toast("Summary copied"); }
+  catch(e){ prompt("Copy below:", text); }
+}
+function importJSON(input){
+  const f = input.files && input.files[0]; if(!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const p = JSON.parse(reader.result);
+      if(!p || !Array.isArray(p.rooms)) throw new Error("bad");
+      p.id = uid(); p.schema = p.schema || 2;
+      projects.unshift(p); save(); render();
+      toast("Imported: " + (p.client||"survey"));
+    }catch(e){ toast("Couldn't read that file"); }
+  };
+  reader.readAsText(f);
+  input.value = "";
+}
+
+/* ============ boot ============ */
+render();
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>
