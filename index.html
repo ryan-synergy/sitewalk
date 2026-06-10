@@ -123,6 +123,10 @@
   .ovh{display:flex; justify-content:space-between; align-items:baseline; border-bottom:1px solid var(--ink); padding-bottom:9px;}
   .ovh .t{font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--muted);}
   .ovh .c{font-family:var(--mono); font-size:13px; color:var(--ink); cursor:pointer; padding:4px 0 4px 16px;}
+  #saveind{position:fixed; top:calc(env(safe-area-inset-top) + 52px); right:16px; z-index:30;
+    font-family:var(--mono); font-size:10px; letter-spacing:.14em; color:var(--muted);
+    opacity:0; transition:opacity .5s ease .4s; pointer-events:none;}
+  #saveind.on{opacity:1; transition:opacity 0s;}
   #toast{position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(8px); z-index:60;
     background:var(--ink); color:var(--paper); padding:11px 18px; border-radius:2px; font-size:14px;
     opacity:0; transition:opacity .18s, transform .18s; pointer-events:none; display:flex; gap:16px; white-space:nowrap;}
@@ -145,6 +149,7 @@
 </head>
 <body>
 <div id="topbar"></div>
+<div id="saveind">● SAVED</div>
 <div id="app"></div>
 <div id="bottombar"></div>
 <div id="overlay"><div class="inner" id="overlay-inner"></div></div>
@@ -212,7 +217,13 @@ try{ customPresets = JSON.parse(localStorage.getItem(LS_PRESETS) || "[]"); }catc
 let view = "home", curProj = null, curRoom = null, lastView = "";
 let arrangeSel = null, sheetFromRoom = false, lastDeleted = null;
 
-const save = () => localStorage.setItem(LS_PROJ, JSON.stringify(projects));
+const save = () => { localStorage.setItem(LS_PROJ, JSON.stringify(projects)); flashSaved(); };
+function flashSaved(){
+  const el = $("saveind"); if(!el) return;
+  el.classList.add("on");
+  clearTimeout(el._tm);
+  el._tm = setTimeout(()=>el.classList.remove("on"), 900);
+}
 const savePresets = () => localStorage.setItem(LS_PRESETS, JSON.stringify(customPresets));
 const uid = () => Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-3);
 const proj = () => projects.find(p=>p.id===curProj);
@@ -384,8 +395,8 @@ function rTopbar(){
 function rBottombar(){
   let h = "";
   if(view==="project") h = `<button class="btn primary block" onclick="startAddRoom()">＋ ADD ROOM</button>`;
-  else if(view==="room") h = `<button class="btn" style="flex:1" onclick="go('project')">DONE</button>
-    <button class="btn primary" style="flex:2" onclick="startAddRoom()">NEXT ROOM →</button>`;
+  else if(view==="room") h = `<button class="btn" style="flex:1" onclick="doneRoom()">DONE</button>
+    <button class="btn primary" style="flex:2" onclick="nextRoom()">NEXT ROOM →</button>`;
   else if(view==="arrange") h = `<button class="btn primary block" onclick="go('project')">DONE ARRANGING</button>`;
   else if(view==="review") h = `<button class="btn" style="flex:1" onclick="go('project')">BACK</button>
     <button class="btn primary" style="flex:1" onclick="window.print()">PRINT / PDF</button>`;
@@ -730,6 +741,16 @@ function rReview(){
 function overlay(html){ $("overlay-inner").innerHTML = html; $("overlay").style.display = "block"; $("overlay").scrollTop = 0; }
 function closeOverlay(){ $("overlay").style.display = "none"; }
 
+function doneRoom(){
+  const r = room(); const name = r ? (r.name || "room") : "";
+  go("project");
+  if(name) toast("Saved — " + name);
+}
+function nextRoom(){
+  const r = room();
+  if(r) toast("Saved — " + (r.name || "room"));
+  startAddRoom();
+}
 function startAddRoom(){
   const p = proj(); if(!p) return;
   let h = `<div class="ovh"><span class="t">NEW ROOM — NAME</span><span class="c" onclick="closeOverlay()">CANCEL ✕</span></div>
