@@ -353,8 +353,17 @@ function render(){
   if(view!=="home" && !proj()) view = "home";
   if(view==="room" && !room()) view = "project";
   const y = window.scrollY;
-  $("app").innerHTML = view==="home" ? rHome() : view==="project" ? rProject()
-    : view==="room" ? rRoom() : view==="arrange" ? rArrange() : rReview();
+  let html;
+  try{
+    html = view==="home" ? rHome() : view==="project" ? rProject()
+      : view==="room" ? rRoom() : view==="arrange" ? rArrange() : rReview();
+  }catch(e){
+    html = `<div class="empty">This view hit an error and couldn't draw.<br><br>
+      <span style="color:var(--orange)">${esc(e.message)}</span><br><br>
+      Your data is safe — export JSON from another view if possible.</div>
+      <button class="btn block" onclick="go('home')">BACK TO SURVEYS</button>`;
+  }
+  $("app").innerHTML = html;
   $("topbar").innerHTML = rTopbar();
   $("bottombar").innerHTML = rBottombar();
   $("bottombar").style.display = view==="home" ? "none" : "block";
@@ -980,23 +989,142 @@ async function copySummary(){
   try{ await navigator.clipboard.writeText(text); toast("Summary copied"); }
   catch(e){ prompt("Copy below:", text); }
 }
+function normalizeRoom(p, raw){
+  raw = raw && typeof raw==="object" ? raw : {};
+  const r = Object.assign(newRoom(p,""), raw);
+  r.id = raw.id || uid();
+  r.exw = Object.assign(Object.fromEntries(EXW.map(x=>[x[0],0])), (raw.exw&&typeof raw.exw==="object")?raw.exw:{});
+  r.localSources = Array.isArray(raw.localSources) ? raw.localSources : [];
+  if(!AUDIO.some(a=>a.id===r.audio)) r.audio = r.tv ? "tv" : "none";
+  if(!["matrix","local","none"].includes(r.videoFeed)) r.videoFeed = r.tv ? "matrix" : "none";
+  if(!["house","local"].includes(r.audioFeed)) r.audioFeed = "house";
+  return r;
+}
+function normalizeProject(raw){
+  raw = raw && typeof raw==="object" ? raw : {};
+  const base = newProj();
+  const p = Object.assign(base, raw);
+  p.schema = 2;
+  p.rack = Object.assign(newProj().rack, (raw.rack&&!Array.isArray(raw.rack)&&typeof raw.rack==="object")?raw.rack:{});
+  p.rack.sources = Object.assign(Object.fromEntries(RACK_SOURCES.map(s=>[s,0])),
+    (p.rack.sources&&typeof p.rack.sources==="object")?p.rack.sources:{});
+  p.network = Object.assign(newProj().network, (raw.network&&typeof raw.network==="object")?raw.network:{});
+  p.habits = Array.isArray(raw.habits) ? raw.habits : [];
+  p.cameras = Array.isArray(raw.cameras) ? raw.cameras.filter(c=>c&&typeof c==="object")
+    .map(c=>({id:c.id||uid(), location:c.location||"", type:CAM_TYPES.includes(c.type)?c.type:"Turret"})) : [];
+  p.rooms = Array.isArray(raw.rooms) ? raw.rooms.map(r=>normalizeRoom(p,r)) : [];
+  return p;
+}
+function bpSourceName(s){
+  s = String(s).toLowerCase();
+  if(s.includes("apple")) return "Apple TV";
+  if(s.includes("roku")) return "Roku";
+  if(s.includes("directv")||s.includes("dtv")) return "DirecTV";
+  if(s.includes("dish")) return "Dish";
+  if(s.includes("cable")) return "Cable box";
+  if(s.includes("xbox")||s.includes("playstation")||s.includes("console")||s.includes("nintendo")) return "Game console";
+  if(s.includes("kaleidescape")) return "Kaleidescape";
+  return "Other";
+}
+function fromBlueprinted(raw){
+  const p = newProj();
+  p.client = raw.client || "";
+  p.jobType = "Retrofit";
+  p.controlSystem = "Savant";
+  p.notes = ["Imported from Blueprinted" + (raw.converted?(" ("+raw.converted+")"):"") + " — old system as programmed; verify on walk.",
+    raw.note||"",
+    (Array.isArray(raw.nonAvZones)&&raw.nonAvZones.length) ? "Non-AV zones skipped: "+raw.nonAvZones.join(", ") : ""
+  ].filter(Boolean).join("\n");
+  const counts = (raw.rackSourceCounts&&typeof raw.rackSourceCounts==="object") ? raw.rackSourceCounts : {};
+  let any = false;
+  Object.entries(counts).forEach(([k,v])=>{
+    const key = RACK_SOURCES.includes(k) ? k : "Other";
+    p.rack.sources[key] = (p.rack.sources[key]||0) + (+v||0);
+    if(+v>0) any = true;
+  });
+  p.rack.sourcesTBD = !any;
+  if(Array.isArray(raw.rack) && raw.rack.length){
+    p.rack.notes = "From Savant config — "+raw.rack.length+" rack components:\n" +
+      raw.rack.map(c=>"• "+[c.component,c.manufacturer,c.model].filter(Boolean).join(" — ")).join("\n");
+  }
+  if(Array.isArray(raw.cameras)) p.cameras = raw.cameras.filter(Boolean).map(c=>({
+    id:uid(), location:(typeof c==="string")?c:(c.location||c.name||c.component||""),
+    type:CAM_TYPES.includes(c&&c.type)?c.type:"Turret"}));
+  p.rooms = (Array.isArray(raw.rooms)?raw.rooms:[]).map(br=>{
+    const r = newRoom(p, "");
+    r.name = br.name || "";
+    r.tv = !!br.tv;
+    const old = (Array.isArray(br.oldTv) && br.oldTv[0]) || null;
+    if(r.tv){
+      r.tvStatus = "Existing — keep";
+      if(old && old.size) r.tvSize = String(old.size);
+    }
+    const zt = String(br.zoneType||"").toLowerCase();
+    let audio = null;
+    if(zt.includes("7.1.4")) audio="7.1.4";
+    else if(zt.includes("5.1.2")) audio="5.1.2";
+    else if(zt.includes("7.1")) audio="7.1";
+    else if(zt.includes("5.1")||zt.includes("surround")) audio="5.1";
+    else if(zt.includes("2.1")) audio="2.1";
+    else if(zt.includes("2-ch")||zt.includes("2.0")||zt.includes("stereo")) audio="2.0";
+    else if(zt.includes("soundbar")) audio = zt.includes("sub") ? "soundbar-sub" : "soundbar";
+    const hasSpk = Array.isArray(br.speakers) && br.speakers.length>0;
+    if(!audio) audio = hasSpk ? "2.0" : (r.tv ? "tv" : "none");
+    r.audio = audio;
+    if(aMeta(audio).stereo) r.audioFeed = zt.includes("local") ? "local" : "house";
+    if(hasSpk){
+      r.audStatus = "Existing — keep";
+      const sp = br.speakers.join(" ").toLowerCase();
+      if(sp.includes("in-wall")||sp.includes("inwall")) r.spkType="In-wall";
+      else if(sp.includes("bookshelf")) r.spkType="Bookshelf";
+      else if(sp.includes("invisible")) r.spkType="Invisible";
+      else if(sp.includes("floor")) r.spkType="Floor-standing";
+      else r.spkType="In-ceiling";
+    }
+    r.videoFeed = ["matrix","local","none"].includes(br.videoFeed) ? br.videoFeed : (r.tv ? "matrix" : "none");
+    if(Array.isArray(br.inRoomSources) && br.inRoomSources.length){
+      r.videoFeed = "local";
+      r.localSources = [...new Set(br.inRoomSources.map(bpSourceName))];
+    }
+    if(zt.includes("theater")) r.isTheater = true;
+    const nb = [];
+    if(old && (old.make||old.model)) nb.push("Existing TV: "+[old.make,old.model].filter(Boolean).join(" ")+(old.size?(" ("+old.size+'")'):""));
+    if(hasSpk) nb.push("Existing speakers: "+br.speakers.join("; "));
+    if(Array.isArray(br.otherSystems) && br.otherSystems.length) nb.push(br.otherSystems.join("\n"));
+    r.notes = nb.join("\n");
+    return r;
+  });
+  return p;
+}
+function importData(raw){
+  let p;
+  if(raw && raw.generator==="Blueprinted") p = fromBlueprinted(raw);
+  else if(raw && Array.isArray(raw.rooms)) p = normalizeProject(raw);
+  else throw new Error("not a survey file");
+  p.id = uid();
+  projects.unshift(p); save(); render();
+  toast("Imported: " + (p.client||"survey"));
+}
 function importJSON(input){
   const f = input.files && input.files[0]; if(!f) return;
   const reader = new FileReader();
   reader.onload = () => {
-    try{
-      const p = JSON.parse(reader.result);
-      if(!p || !Array.isArray(p.rooms)) throw new Error("bad");
-      p.id = uid(); p.schema = p.schema || 2;
-      projects.unshift(p); save(); render();
-      toast("Imported: " + (p.client||"survey"));
-    }catch(e){ toast("Couldn't read that file"); }
+    try{ importData(JSON.parse(reader.result)); }
+    catch(e){ toast("Couldn't read that file"); }
   };
   reader.readAsText(f);
   input.value = "";
 }
 
 /* ============ boot ============ */
+projects = projects.map(p => {
+  try{
+    if(p && p.generator==="Blueprinted"){ const np = fromBlueprinted(p); np.id = p.id || np.id; return np; }
+    if(p && p.schema !== 2) return Object.assign(normalizeProject(p), {id: p.id || uid()});
+    return normalizeProject(p);
+  }catch(e){ return p; }
+}).filter(Boolean);
+save();
 render();
 if("serviceWorker" in navigator && location.protocol.startsWith("http")){
   navigator.serviceWorker.register("./sw.js").catch(()=>{});

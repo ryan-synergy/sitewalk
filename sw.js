@@ -1,4 +1,4 @@
-const CACHE = "sitewalk-v2-1";
+const CACHE = "sitewalk-v2-2";
 const CORE = ["./", "./index.html"];
 
 self.addEventListener("install", e => {
