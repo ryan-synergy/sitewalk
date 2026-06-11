@@ -79,8 +79,8 @@
   .item.sel{border-color:var(--ink); background:var(--paper);}
   .idx{font-family:var(--mono); font-size:12px; color:var(--muted); min-width:22px;}
   .idx.flag{color:var(--orange); font-weight:500;}
-  .item .title{font-weight:500; font-size:15px;}
-  .item .sub{font-size:12.5px; color:var(--muted); margin-top:2px; line-height:1.45;}
+  .item .title{font-weight:500; font-size:15px; overflow-wrap:anywhere;}
+  .item .sub{font-size:12.5px; color:var(--muted); margin-top:2px; line-height:1.45; overflow-wrap:anywhere;}
   .icon-btn{background:none; border:none; color:var(--muted); font-size:15px; padding:8px 6px; cursor:pointer; font-family:var(--sans);}
   .muted{color:var(--muted); font-size:13px;}
   .mono{font-family:var(--mono);}
@@ -183,6 +183,18 @@ const aMeta = id => AUDIO.find(a=>a.id===id) || AUDIO[0];
 const SPK_TYPES = ["In-ceiling","In-wall","On-wall","Bookshelf","Floor-standing","Invisible"];
 const SUB_LOCS = ["In-wall","In-ceiling","Floor-standing","In cabinet"];
 const MOUNTS = ["Wall mount","On cabinet","Built-in / recessed"];
+const BRACKETS = ["Fixed","Tilt","Full-motion","Recessed (in-wall box)","Pull-down (fireplace)"];
+const RACK_MODELS = [
+  {brand:"Strong FS", u:15, h:34,     w:21.1, d:23.25},
+  {brand:"Strong FS", u:21, h:44.5,   w:21.1, d:23.25},
+  {brand:"Strong FS", u:27, h:55,     w:21.1, d:23.25},
+  {brand:"Strong FS", u:42, h:79.7,   w:21.1, d:23.1},
+  {brand:"Mid Atlantic BGR", u:25, h:47.875, w:23, d:27},
+  {brand:"Mid Atlantic BGR", u:38, h:70.625, w:23, d:27},
+  {brand:"Mid Atlantic BGR", u:45, h:82.875, w:23, d:27},
+];
+const rackLabel = m => m.brand + " " + m.u + "U";
+const RACK_MIN = {d:26, w:22};
 const STATUS3 = ["New","Existing — keep","Existing — replace"];
 const LOCAL_SOURCES = ["Apple TV","Roku","DirecTV","Dish","Cable box","Game console","Other"];
 const EQUIP_LOCS = ["Behind TV","Cabinet in room","Closet nearby","Head-end rack"];
@@ -248,13 +260,15 @@ function doUndo(){ if(window._undoFn){ window._undoFn(); window._undoFn=null; $(
 function newProj(){
   return { id:uid(), schema:2, client:"", address:"", date:new Date().toISOString().slice(0,10),
     jobType:"", controlSystem:"", habits:[], notes:"", lastBackup:"",
-    rack:{ location:"", notes:"", sourcesTBD:true, sources:Object.fromEntries(RACK_SOURCES.map(s=>[s,0])) },
+    rack:{ location:"", notes:"", sourcesTBD:true, sources:Object.fromEntries(RACK_SOURCES.map(s=>[s,0])),
+      closetW:"", closetD:"", closetH:"", rackPick:"" },
     network:{ isp:"", modemLoc:"", waps:0, drops:0, notes:"" },
     cameras:[], rooms:[] };
 }
 function newRoom(p, name){
   return { id:uid(), name:name||"", floor:"", flagged:false,
-    tv:true, tvSize:"", tvStatus:"New", mount:"Wall mount",
+    tv:true, tvSize:"", tvStatus:"New", mount:"Wall mount", bracket:"Fixed",
+    barType:"powered", barAvrLoc:"rack",
     fireplace:false, fpW:"", fpH:"", fpMantel:"", wallW:"", wallH:"",
     isTheater:false, thDisplay:"", thScreen:"", thRows:1, thSeats:4, riser:false, acoustic:false,
     audio:"tv", spkType:"In-ceiling", subLoc:"In-wall", audStatus:"New", audioFeed:"house", zoneName:"",
@@ -268,7 +282,7 @@ function newRoom(p, name){
 function autoControl(p, r){
   const a = aMeta(r.audio);
   if(!r.tv && a.id==="none" && !r.landscape) return "None";
-  const onSys = r.videoFeed==="matrix" || (a.stereo && r.audioFeed==="house") || r.landscape;
+  const onSys = r.videoFeed==="matrix" || r.videoFeed==="direct" || (a.stereo && r.audioFeed==="house") || r.landscape;
   if(onSys && p.controlSystem && p.controlSystem!=="None") return "System remote";
   return "Factory remote";
 }
@@ -287,6 +301,7 @@ function roomFlags(p, r){
     else if(r.thDisplay==="Projector" && !r.thScreen) f.push("Theater: screen size TBD");
   }
   if(r.videoFeed==="matrix" && r.wiring==="fishing" && !hasCat(r)) f.push("No CAT path for decoder");
+  if(r.videoFeed==="direct" && r.wiring==="fishing" && !hasCat(r) && !r.exw.HDMI) f.push("No path for direct rack feed");
   if((a.spk || r.landscape) && r.wiring==="fishing" && !r.exw.SpeakerWire) f.push("Speaker wire path?");
   if(r.flagged) f.push("Flagged on walk");
   return f;
@@ -296,6 +311,8 @@ function projFlags(p){
   p.rooms.forEach(r => roomFlags(p,r).forEach(fl => out.push({roomId:r.id, room:r.name||"Unnamed", label:fl})));
   if(p.rack.sourcesTBD && p.rooms.some(r=>r.videoFeed==="matrix"))
     out.push({roomId:null, room:"Rack", label:"Sources TBD — encoder count open"});
+  const fit = rackFit(p);
+  if(fit) fit.issues.forEach(i => out.push({roomId:null, room:"Rack closet", label:i}));
   return out;
 }
 
@@ -308,13 +325,19 @@ function buildSheet(p){
   newTVs.forEach(r=>{ const k = r.tvSize ? r.tvSize+'"' : "TBD"; bySize[k]=(bySize[k]||0)+1; });
   const sizeStr = Object.entries(bySize).map(([k,v])=>v+"×"+k).join("  ") || "0";
   rows.push(["TVs (new)", sizeStr + (keepTVs?("   +"+keepTVs+" existing"):"")]);
+  const brk = {};
+  p.rooms.filter(r=>r.tv && r.mount==="Wall mount").forEach(r=>{ const b=r.bracket||"Fixed"; brk[b]=(brk[b]||0)+1; });
+  if(Object.keys(brk).length)
+    rows.push(["Wall mounts", Object.entries(brk).map(([k,v])=>v+"× "+k.replace(/ \(.*$/,"")).join("  ")]);
   const dec = p.rooms.filter(r=>r.videoFeed==="matrix").length;
   rows.push(["MXNet decoders", dec]);
+  const direct = p.rooms.filter(r=>r.videoFeed==="direct").length;
+  if(direct) rows.push(["Direct rack feeds (home-run)", direct]);
   const encN = Object.values(p.rack.sources).reduce((a,b)=>a+(+b||0),0);
   rows.push(["MXNet encoders", p.rack.sourcesTBD ? "TBD" : encN]);
   const zones = new Set(p.rooms.filter(isHouseFed).map(r=>zoneOf(r).toLowerCase()));
   rows.push(["House-amp zones", zones.size]);
-  rows.push(["AVRs", p.rooms.filter(r=>aMeta(r.audio).avr).length]);
+  rows.push(["AVRs", p.rooms.filter(r=>aMeta(r.audio).avr || (aMeta(r.audio).bar && r.barType==="passive")).length]);
   const localAmps = p.rooms.filter(r=>aMeta(r.audio).stereo && r.audioFeed==="local").length;
   if(localAmps) rows.push(["Local stereo amps", localAmps]);
   const bars = p.rooms.filter(r=>aMeta(r.audio).bar).length;
@@ -334,6 +357,38 @@ function buildSheet(p){
   return rows;
 }
 
+function ftInParts(v){
+  if(v===""||v==null||isNaN(parseFloat(v))) return ["",""];
+  const x = parseFloat(v);
+  let f = Math.floor(x), i = Math.round((x-f)*12);
+  if(i===12){ f++; i=0; }
+  return [String(f), String(i)];
+}
+const fmtFtIn = v => { const [f,i]=ftInParts(v); return f==="" ? "" : f+"′"+(i!=="0"?i+"″":""); };
+function setWallPart(field, part, val){
+  const r = room(); if(!r) return;
+  const [f0,i0] = ftInParts(r[field]);
+  const f = parseFloat(part==="ft"?val:f0)||0, i = parseFloat(part==="in"?val:i0)||0;
+  r[field] = (f||i) ? +(f+i/12).toFixed(4) : "";
+  save(); upCalc();
+}
+function setBracket(v){ room().bracket=v; save(); render(); }
+function setFireplace(v){
+  const r = room(); r.fireplace = v;
+  if(v && r.bracket==="Fixed") r.bracket = "Pull-down (fireplace)";
+  save(); render();
+}
+function rackFit(p){
+  const rk = p.rack;
+  const w = parseFloat(rk.closetW), d = parseFloat(rk.closetD), hh = parseFloat(rk.closetH);
+  if(!w && !d && !hh) return null;
+  const issues = [];
+  if(d && d < RACK_MIN.d) issues.push(`Closet too shallow — ${d}″ < ${RACK_MIN.d}″ min`);
+  if(w && w < RACK_MIN.w) issues.push(`Closet too narrow — ${w}″ < ${RACK_MIN.w}″ min`);
+  const m = RACK_MODELS.find(x=>rackLabel(x)===rk.rackPick);
+  if(m && hh && hh < m.h + 2) issues.push(`${rk.rackPick} needs ${(m.h+2).toFixed(0)}″ clear — closet is ${hh}″`);
+  return {issues, model:m, ok:!issues.length};
+}
 function tvCalc(r){
   const w = parseFloat(r.wallW);
   if(!w || w<=0) return null;
@@ -357,7 +412,7 @@ function roomSummary(p, r){
     if(a.stereo) s += r.audioFeed==="house" ? " · house amp" : " · local amp";
     bits.push(s);
   }
-  if(r.tv) bits.push(r.videoFeed==="matrix" ? "on system" : (r.videoFeed==="local" ? "off system: "+(r.localSources.join(", ")||"?") : "no source"));
+  if(r.tv) bits.push(r.videoFeed==="matrix" ? "on system" : r.videoFeed==="direct" ? "direct from rack: "+(r.localSources.join(", ")||"?") : (r.videoFeed==="local" ? "off system: "+(r.localSources.join(", ")||"?") : "no source"));
   if(r.wiring) bits.push(wLabel(r.wiring).toLowerCase());
   return bits.join(" — ") || "Empty room";
 }
@@ -395,7 +450,7 @@ function rTopbar(){
   const mid = view==="home" ? "" : `<span class="wordmark">SITEWALK</span>`;
   return left + mid + `<span style="display:flex; gap:16px">
     <button class="tb-btn" onclick="openTools()">TOOLS</button>
-    <button class="tb-btn" onclick="openSheet()">TV SIZES</button></span>`;
+    <button class="tb-btn" onclick="openSheet()">REFERENCE</button></span>`;
 }
 function rBottombar(){
   let h = "";
@@ -446,8 +501,7 @@ function rProject(){
   let h = `<div class="card">
     <label class="fld">Client</label><input type="text" value="${esc(p.client)}" placeholder="Client name" oninput="upP('client',this.value)">
     <label class="fld">Address</label><input type="text" value="${esc(p.address)}" placeholder="Street address" oninput="upP('address',this.value)">
-    <div class="grid2"><div><label class="fld">Date</label><input type="date" value="${esc(p.date)}" oninput="upP('date',this.value)"></div>
-    <div><label class="fld">Revision of</label><div class="muted mono" style="padding:12px 0">${p.client?esc(p.client):"—"}</div></div></div>
+    <label class="fld">Date</label><input type="date" value="${esc(p.date)}" oninput="upP('date',this.value)">
     <label class="fld">Job type</label>${chiprow(JOB_TYPES, p.jobType, "setJobType")}
     <label class="fld">Control system</label>${chiprow(CONTROL_SYSTEMS, p.controlSystem, "setCS")}
   </div>`;
@@ -474,10 +528,23 @@ function rProject(){
     });
   } else h += p.rooms.map(renderRow).join("");
 
+  const fit = rackFit(p);
   h += `<h2>Rack &amp; distribution</h2><div class="card">
     <label class="fld">Rack / head-end location</label>
     <input type="text" value="${esc(p.rack.location)}" placeholder="e.g. Mechanical room, AV closet" oninput="upRack('location',this.value)">
-    <label class="fld">Rack sources</label>
+    <label class="fld">Closet size (inches)</label>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px">
+      <input type="number" inputmode="decimal" value="${esc(p.rack.closetW)}" placeholder="W" onchange="upRack('closetW',this.value);render()">
+      <input type="number" inputmode="decimal" value="${esc(p.rack.closetD)}" placeholder="D" onchange="upRack('closetD',this.value);render()">
+      <input type="number" inputmode="decimal" value="${esc(p.rack.closetH)}" placeholder="H" onchange="upRack('closetH',this.value);render()"></div>
+    <label class="fld">Planned rack</label>
+    <div class="chips">${RACK_MODELS.map(m=>{const l=rackLabel(m);
+      return `<div class="chip ${p.rack.rackPick===l?"on":""}" onclick="setRackPick('${esc(l)}')">${esc(l)}</div>`;}).join("")}
+      <div class="chip ${!p.rack.rackPick?"on":""}" onclick="setRackPick('')">TBD</div></div>`;
+  if(fit) h += fit.ok
+    ? `<div class="calc">RACK FIT ✓ — closet clears the ${esc(p.rack.rackPick||"26″D × 22″W")} minimums</div>`
+    : `<div class="calc" style="color:var(--orange)">⚑ ${fit.issues.map(esc).join("<br>⚑ ")}</div>`;
+  h += `<label class="fld">Rack sources</label>
     <div class="chips" style="margin-bottom:8px"><div class="chip ${p.rack.sourcesTBD?"on":""}" onclick="togTBD()">TBD — design later</div></div>`;
   if(!p.rack.sourcesTBD){
     h += RACK_SOURCES.map(s=>`<div class="steprow"><div class="slabel">${s}</div>${stepperSrc(s)}</div>`).join("");
@@ -565,17 +632,23 @@ function rRoom(){
       TV_SIZES.map(s=>`<div class="chip ${String(r.tvSize)===String(s)?"on":""}" onclick="setSize('${s}')">${s}</div>`).join("") +
       `<div class="chip ${r.tvSize===""?"warn":""}" onclick="setSize('')">TBD</div></div>
       <label class="fld">TV status</label>${chiprow(STATUS3, r.tvStatus, "setTvStatus")}
-      <label class="fld">Mounting</label>${chiprow(MOUNTS, r.mount, "setMount")}
-      <div class="chips" style="margin-top:12px"><div class="chip ${r.fireplace?"on":""}" onclick="setR('fireplace',${!r.fireplace})">Above fireplace</div></div>`;
+      <label class="fld">Mounting</label>${chiprow(MOUNTS, r.mount, "setMount")}`;
+    if(r.mount==="Wall mount") h += `<label class="fld">Bracket</label>${chiprow(BRACKETS, r.bracket, "setBracket")}`;
+    h += `<div class="chips" style="margin-top:12px"><div class="chip ${r.fireplace?"on":""}" onclick="setFireplace(${!r.fireplace})">Above fireplace</div></div>`;
     if(r.fireplace){
       h += `<div class="grid2" style="margin-top:10px">
         <input type="number" inputmode="decimal" value="${esc(r.fpW)}" placeholder="Fireplace W (in)" oninput="upR('fpW',this.value)">
         <input type="number" inputmode="decimal" value="${esc(r.fpH)}" placeholder="Fireplace H (in)" oninput="upR('fpH',this.value)"></div>
         <div style="margin-top:10px"><input type="number" inputmode="decimal" value="${esc(r.fpMantel)}" placeholder="Mantel height off floor (in)" oninput="upR('fpMantel',this.value)"></div>`;
     }
+    const [wf,wi] = ftInParts(r.wallW), [hf,hi] = ftInParts(r.wallH);
     h += `<label class="fld">Wall size → recommended TV</label><div class="grid2">
-      <input type="number" inputmode="decimal" step="0.5" value="${esc(r.wallW)}" placeholder="Wall width (ft)" oninput="upR('wallW',this.value);upCalc()">
-      <input type="number" inputmode="decimal" step="0.5" value="${esc(r.wallH)}" placeholder="Wall height (ft)" oninput="upR('wallH',this.value);upCalc()"></div>
+      <div><label class="fld" style="margin-top:0">Wall width</label><div class="row" style="gap:7px">
+        <input type="number" inputmode="numeric" value="${wf}" placeholder="ft" oninput="setWallPart('wallW','ft',this.value)">
+        <input type="number" inputmode="numeric" value="${wi}" placeholder="in" oninput="setWallPart('wallW','in',this.value)"></div></div>
+      <div><label class="fld" style="margin-top:0">Wall height</label><div class="row" style="gap:7px">
+        <input type="number" inputmode="numeric" value="${hf}" placeholder="ft" oninput="setWallPart('wallH','ft',this.value)">
+        <input type="number" inputmode="numeric" value="${hi}" placeholder="in" oninput="setWallPart('wallH','in',this.value)"></div></div></div>
       <div id="tvcalc">${calcHTML(r)}</div>`;
   }
   h += `</div>`;
@@ -589,6 +662,14 @@ function rRoom(){
       + zoneRow(p,r);
   } else {
     h += `<div class="chips">` + AUDIO.map(o=>`<div class="chip ${r.audio===o.id?"on":""}" onclick="setAudio('${o.id}')">${o.label}</div>`).join("") + `</div>`;
+    if(a.bar){
+      h += `<label class="fld">Soundbar type</label><div class="chips">
+        <div class="chip ${r.barType!=="passive"?"on":""}" onclick="setR('barType','powered')">Powered (Sonos-style)</div>
+        <div class="chip ${r.barType==="passive"?"on":""}" onclick="setR('barType','passive')">Passive (AVR-driven)</div></div>`;
+      if(r.barType==="passive") h += `<label class="fld">AVR location</label><div class="chips">
+        <div class="chip ${r.barAvrLoc!=="room"?"on":""}" onclick="setR('barAvrLoc','rack')">At rack</div>
+        <div class="chip ${r.barAvrLoc==="room"?"on":""}" onclick="setR('barAvrLoc','room')">In room</div></div>`;
+    }
     if(a.spk) h += `<label class="fld">Speaker type</label>${chiprow(SPK_TYPES, r.spkType, "setSpk")}`;
     if(a.id!=="none" && a.id!=="tv") h += `<label class="fld">Audio status</label>${chiprow(STATUS3, r.audStatus, "setAudStatus")}`;
     if(a.sub) h += `<label class="fld">Subwoofer location</label>${chiprow(SUB_LOCS, r.subLoc, "setSub")}`;
@@ -598,7 +679,7 @@ function rRoom(){
         <div class="chip ${r.audioFeed==="local"?"on":""}" onclick="setFeed('local')">Local amp</div></div>`;
       if(r.audioFeed==="house") h += zoneRow(p,r);
     }
-    if(a.avr) h += `<div class="badge">AVR REQUIRED</div>`;
+    if(a.avr || (a.bar && r.barType==="passive")) h += `<div class="badge">AVR REQUIRED${a.bar?(r.barAvrLoc==="room"?" — IN ROOM":" — AT RACK"):""}</div>`;
     if(a.stereo && r.audioFeed==="local") h += `<div class="badge">AMP REQUIRED</div>`;
   }
   h += `</div>`;
@@ -606,11 +687,16 @@ function rRoom(){
   /* video source */
   h += `<h2>Video source</h2><div class="card"><div class="chips">
     <div class="chip ${r.videoFeed==="matrix"?"on":""}" onclick="setVF('matrix')">On system (matrix)</div>
+    <div class="chip ${r.videoFeed==="direct"?"on":""}" onclick="setVF('direct')">Direct from rack</div>
     <div class="chip ${r.videoFeed==="local"?"on":""}" onclick="setVF('local')">Off system (local)</div>
     <div class="chip ${r.videoFeed==="none"?"on":""}" onclick="setVF('none')">No source</div></div>`;
   if(r.videoFeed==="local"){
     h += `<label class="fld">Local sources</label>${multirow(LOCAL_SOURCES, r.localSources, "togSource")}
       <label class="fld">Gear location</label>${chiprow(EQUIP_LOCS, r.equipLoc, "setEquip")}`;
+  }
+  if(r.videoFeed==="direct"){
+    h += `<label class="fld">Sources at rack, dedicated to this TV</label>${multirow(LOCAL_SOURCES, r.localSources, "togSource")}
+      <div class="muted mono" style="margin-top:9px; font-size:11.5px">GEAR AT HEAD-END — DEDICATED RUN TO THIS TV, NOT ON THE MATRIX</div>`;
   }
   h += `</div>`;
 
@@ -650,7 +736,7 @@ function calcHTML(r){
   const c = tvCalc(r);
   if(!c) return `<div class="calc" style="color:var(--muted)">Enter wall width for a recommendation.</div>`;
   if(!c.size) return `<div class="calc">Wall too tight for a 32&quot; panel with breathing room.</div>`;
-  return `<div class="calc">WALL ${esc(r.wallW)}′${r.wallH?` × ${esc(r.wallH)}′`:""} → REC <b>${c.size}″</b> &nbsp;${c.tw}w × ${c.th}h, ~8″ clear each side</div>`;
+  return `<div class="calc">WALL ${fmtFtIn(r.wallW)}${r.wallH?` × ${fmtFtIn(r.wallH)}`:""} → REC <b>${c.size}″</b> &nbsp;${c.tw}w × ${c.th}h, ~8″ clear each side</div>`;
 }
 function upCalc(){ const el=$("tvcalc"); if(el) el.innerHTML = calcHTML(room()); }
 
@@ -704,10 +790,12 @@ function rReview(){
       ` · ${r.thRows} row${r.thRows>1?"s":""}, ${r.thSeats} seats${r.riser?", riser":""}${r.acoustic?", acoustic treatment":""}`);
     if(r.tv && !(r.isTheater&&r.thDisplay==="Projector"))
       lines.push("TV: " + (r.tvSize?r.tvSize+"″":'<span class="tbd">size TBD ⚑</span>') + " — " + r.mount.toLowerCase() +
-        (r.fireplace?" above fireplace":"") + (r.tvStatus!=="New"?" ("+r.tvStatus.toLowerCase()+")":""));
+        (r.mount==="Wall mount"?", "+(r.bracket||"Fixed").toLowerCase()+" bracket":"") +
+        (r.fireplace?", above fireplace":"") + (r.tvStatus!=="New"?" ("+r.tvStatus.toLowerCase()+")":""));
     if(r.landscape) lines.push(`Landscape audio: ${r.satCount} satellites${r.buriedSub?" + buried sub":""} — zone “${esc(zoneOf(r))}”`);
     else if(a.id!=="none"&&a.id!=="tv"){
       let s = "Audio: " + a.label;
+      if(a.bar) s += r.barType==="passive" ? " (passive, AVR "+(r.barAvrLoc==="room"?"in room":"at rack")+")" : " (powered)";
       if(a.spk) s += " — " + r.spkType.toLowerCase();
       if(a.sub) s += ", sub " + r.subLoc.toLowerCase();
       if(a.stereo) s += r.audioFeed==="house" ? ` — zone “${esc(zoneOf(r))}”` : " — local amp";
@@ -716,6 +804,7 @@ function rReview(){
       lines.push(s);
     }
     if(r.tv||r.videoFeed!=="none") lines.push("Source: " + (r.videoFeed==="matrix"?"on system":
+      r.videoFeed==="direct"?("direct from rack — "+(r.localSources.join(", ")||"?")+", dedicated run"):
       r.videoFeed==="local"?("off system — "+(r.localSources.join(", ")||"?")+" @ "+r.equipLoc.toLowerCase()):"none") +
       " · control: " + ctrlOf(p,r).toLowerCase());
     const wir = r.wiring ? wLabel(r.wiring) : (needsInfra(r)?'<span class="tbd">wiring TBD ⚑</span>':"");
@@ -848,6 +937,11 @@ function openSheet(){
     TV_SIZES.map(s=>`<tr class="${fromRoom?"tap":""}" ${fromRoom?`onclick="sheetPick(${s})"`:""}>
       <td>${s}″</td><td>${SHEET_DISP[s][0]}″</td><td>${SHEET_DISP[s][1]}″</td></tr>`).join("") + `</table>` +
     (fromRoom ? `<div class="muted mono" style="margin-top:14px; font-size:11.5px">TAP A ROW TO SET THIS ROOM'S TV</div>` : "");
+  h += `<div class="ovh" style="margin-top:34px"><span class="t">AV RACKS — CLOSET MINIMUMS</span></div>
+    <div class="calc" style="border-top:none; padding-left:0">CLOSET MIN <b>${RACK_MIN.d}″ DEEP × ${RACK_MIN.w}″ WIDE</b> · HEIGHT = RACK + 2″ CLEAR</div>
+    <table class="sheet-table"><tr><th>Rack</th><th>H</th><th>W</th><th>D</th></tr>` +
+    RACK_MODELS.map(m=>`<tr><td style="font-size:15px">${esc(m.brand)} ${m.u}U</td><td>${m.h}″</td><td>${m.w}″</td><td>${m.d}″</td></tr>`).join("") +
+    `</table><div class="muted mono" style="margin-top:12px; font-size:11px">1U = 1.75″ · HEIGHTS INCLUDE CASTERS/BASE</div>`;
   overlay(h);
 }
 function sheetPick(s){ const r=room(); if(r){ r.tvSize=String(s); save(); } closeOverlay(); render(); }
@@ -880,6 +974,7 @@ function setJobType(v){ const p=proj(); p.jobType = p.jobType===v?"":v; save(); 
 function setCS(v){ const p=proj(); p.controlSystem = p.controlSystem===v?"":v; save(); render(); }
 function togHabit(v){ const p=proj(); p.habits = p.habits.includes(v)?p.habits.filter(x=>x!==v):[...p.habits,v]; save(); render(); }
 function upRack(f,v){ proj().rack[f]=v; save(); }
+function setRackPick(v){ proj().rack.rackPick=v; save(); render(); }
 function togTBD(){ const rk=proj().rack; rk.sourcesTBD=!rk.sourcesTBD; save(); render(); }
 function stepperSrc(s){
   return `<div class="stepper"><button onclick="stepSrc('${esc(s)}',-1)">−</button><div class="val">${proj().rack.sources[s]||0}</div><button onclick="stepSrc('${esc(s)}',1)">＋</button></div>`;
@@ -957,20 +1052,23 @@ function buildCSV(){
   rows.push(["OPEN ITEMS ("+flags.length+")"]);
   flags.forEach(f=>rows.push(["⚑", f.room, f.label]));
   rows.push([]);
-  rows.push(["Floor","Room","TV","Size","TV status","Mount","Fireplace","Wall WxH ft","Theater","Audio","Spk type","Audio status","Sub","Fed by","Zone","Gear","Video","Local sources","Gear loc","Control","Wiring","In place","Notes","Flags"]);
+  rows.push(["Floor","Room","TV","Size","TV status","Mount","Bracket","Fireplace","Wall WxH","Theater","Audio","Bar type","Spk type","Audio status","Sub","Fed by","Zone","Gear","Video","Sources","Gear loc","Control","Wiring","In place","Notes","Flags"]);
   p.rooms.forEach(r=>{
     const a=aMeta(r.audio), fl=roomFlags(p,r);
     rows.push([r.floor, r.name, r.tv?"Yes":"No",
       r.isTheater&&r.thDisplay==="Projector" ? "PJ "+(r.thScreen||"TBD") : (r.tv?(r.tvSize||"TBD ⚑"):""),
-      r.tv?r.tvStatus:"", r.tv?r.mount:"", r.fireplace?("Yes "+[r.fpW&&r.fpW+"w",r.fpH&&r.fpH+"h",r.fpMantel&&"mantel "+r.fpMantel].filter(Boolean).join(" ")):"",
-      (r.wallW||r.wallH)?(r.wallW+" x "+r.wallH):"",
+      r.tv?r.tvStatus:"", r.tv?r.mount:"", (r.tv&&r.mount==="Wall mount")?(r.bracket||"Fixed"):"",
+      r.fireplace?("Yes "+[r.fpW&&r.fpW+"w",r.fpH&&r.fpH+"h",r.fpMantel&&"mantel "+r.fpMantel].filter(Boolean).join(" ")):"",
+      (r.wallW||r.wallH)?(fmtFtIn(r.wallW)+" x "+fmtFtIn(r.wallH)):"",
       r.isTheater?[r.thDisplay,r.thRows+" rows",r.thSeats+" seats",r.riser&&"riser",r.acoustic&&"acoustic"].filter(Boolean).join("; "):"",
       r.landscape?("Landscape "+r.satCount+" sat"+(r.buriedSub?" + buried sub":"")):a.label,
+      a.bar?(r.barType==="passive"?"Passive (AVR "+(r.barAvrLoc==="room"?"in room":"at rack")+")":"Powered"):"",
       a.spk?r.spkType:"", (a.id!=="none"&&a.id!=="tv")?r.audStatus:"", a.sub?r.subLoc:"",
       r.landscape?"House amp":(a.stereo?(r.audioFeed==="house"?"House amp":"Local amp"):""),
-      isHouseFed(r)?zoneOf(r):"", a.avr?"AVR":(a.stereo&&r.audioFeed==="local"?"Amp":""),
-      r.videoFeed==="matrix"?"On system":(r.videoFeed==="local"?"Off system":"None"),
-      r.videoFeed==="local"?r.localSources.join("; "):"", r.videoFeed==="local"?r.equipLoc:"",
+      isHouseFed(r)?zoneOf(r):"", (a.avr||(a.bar&&r.barType==="passive"))?"AVR":(a.stereo&&r.audioFeed==="local"?"Amp":""),
+      r.videoFeed==="matrix"?"On system":(r.videoFeed==="direct"?"Direct from rack":(r.videoFeed==="local"?"Off system":"None")),
+      (r.videoFeed==="local"||r.videoFeed==="direct")?r.localSources.join("; "):"",
+      r.videoFeed==="local"?r.equipLoc:(r.videoFeed==="direct"?"Head-end rack":""),
       ctrlOf(p,r), r.wiring?wLabel(r.wiring):(needsInfra(r)?"TBD ⚑":""), exwStr(r), r.notes, fl.join("; ")]);
   });
   rows.push([]);
@@ -1003,17 +1101,18 @@ function buildText(){
     const a=aMeta(r.audio);
     L.push((i+1)+". "+(r.name||"Unnamed")+(r.floor?" ["+r.floor+"]":""));
     if(r.isTheater) L.push("   Theater: "+(r.thDisplay||"display TBD ⚑")+(r.thDisplay==="Projector"?" "+(r.thScreen?r.thScreen+'" screen':"screen TBD ⚑"):"")+", "+r.thRows+" rows / "+r.thSeats+" seats"+(r.riser?", riser":"")+(r.acoustic?", acoustic":""));
-    if(r.tv && !(r.isTheater&&r.thDisplay==="Projector")) L.push("   TV: "+(r.tvSize?r.tvSize+'"':"TBD ⚑")+" "+r.mount+(r.fireplace?" above fireplace":"")+(r.tvStatus!=="New"?" ("+r.tvStatus+")":""));
+    if(r.tv && !(r.isTheater&&r.thDisplay==="Projector")) L.push("   TV: "+(r.tvSize?r.tvSize+'"':"TBD ⚑")+" "+r.mount+(r.mount==="Wall mount"?" ("+(r.bracket||"Fixed")+")":"")+(r.fireplace?" above fireplace":"")+(r.tvStatus!=="New"?" ("+r.tvStatus+")":""));
     if(r.landscape) L.push("   Landscape audio: "+r.satCount+" sats"+(r.buriedSub?" + buried sub":"")+" — zone "+zoneOf(r));
     else if(a.id!=="none"&&a.id!=="tv"){
       let s="   Audio: "+a.label;
+      if(a.bar) s+= r.barType==="passive" ? " (passive, AVR "+(r.barAvrLoc==="room"?"in room":"at rack")+")" : " (powered)";
       if(a.spk) s+=" "+r.spkType;
       if(a.sub) s+=", sub "+r.subLoc;
       if(a.stereo) s+= r.audioFeed==="house"?" — zone "+zoneOf(r):" — local amp";
       if(a.avr) s+=" [AVR]";
       L.push(s);
     }
-    if(r.tv||r.videoFeed!=="none") L.push("   Video: "+(r.videoFeed==="matrix"?"on system":r.videoFeed==="local"?"off system — "+(r.localSources.join(", ")||"?")+" @ "+r.equipLoc:"none")+" · control: "+ctrlOf(p,r));
+    if(r.tv||r.videoFeed!=="none") L.push("   Video: "+(r.videoFeed==="matrix"?"on system":r.videoFeed==="direct"?"direct from rack — "+(r.localSources.join(", ")||"?")+" (dedicated run)":r.videoFeed==="local"?"off system — "+(r.localSources.join(", ")||"?")+" @ "+r.equipLoc:"none")+" · control: "+ctrlOf(p,r));
     const wir = r.wiring?wLabel(r.wiring):(needsInfra(r)?"TBD ⚑":""), ex=exwStr(r);
     if(wir||ex) L.push("   Wiring: "+[wir,ex?("in place: "+ex):""].filter(Boolean).join(" · "));
     if(r.notes) L.push("   Notes: "+r.notes);
@@ -1021,6 +1120,9 @@ function buildText(){
   L.push("", "BUILD SHEET");
   buildSheet(p).forEach(([k,v])=>L.push("   "+k+": "+v));
   L.push("", "RACK: "+(p.rack.location||"—")+(p.rack.sourcesTBD?" · sources TBD":" · "+RACK_SOURCES.filter(s=>p.rack.sources[s]>0).map(s=>s+" x"+p.rack.sources[s]).join(", ")));
+  const fitT = rackFit(p);
+  if(p.rack.closetW||p.rack.closetD||p.rack.closetH)
+    L.push("   Closet: "+(p.rack.closetW||"?")+"w x "+(p.rack.closetD||"?")+"d x "+(p.rack.closetH||"?")+"h in"+(p.rack.rackPick?" · planned: "+p.rack.rackPick:"")+(fitT?(fitT.ok?" · FIT OK":" · ⚑ "+fitT.issues.join("; ")):""));
   if(p.rack.notes) L.push("   "+p.rack.notes);
   L.push("NETWORK: "+[p.network.isp,p.network.modemLoc&&"modem "+p.network.modemLoc,(+p.network.waps>0)&&p.network.waps+" WAPs",(+p.network.drops>0)&&p.network.drops+" drops"].filter(Boolean).join(" · "));
   if(p.network.notes) L.push("   "+p.network.notes);
@@ -1060,7 +1162,8 @@ function normalizeRoom(p, raw){
   r.exw = Object.assign(Object.fromEntries(EXW.map(x=>[x[0],0])), (raw.exw&&typeof raw.exw==="object")?raw.exw:{});
   r.localSources = Array.isArray(raw.localSources) ? raw.localSources : [];
   if(!AUDIO.some(a=>a.id===r.audio)) r.audio = r.tv ? "tv" : "none";
-  if(!["matrix","local","none"].includes(r.videoFeed)) r.videoFeed = r.tv ? "matrix" : "none";
+  if(!["matrix","direct","local","none"].includes(r.videoFeed)) r.videoFeed = r.tv ? "matrix" : "none";
+  if(!BRACKETS.includes(r.bracket)) r.bracket = "Fixed";
   if(!["house","local"].includes(r.audioFeed)) r.audioFeed = "house";
   return r;
 }
