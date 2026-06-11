@@ -123,6 +123,8 @@
   .ovh{display:flex; justify-content:space-between; align-items:baseline; border-bottom:1px solid var(--ink); padding-bottom:9px;}
   .ovh .t{font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--muted);}
   .ovh .c{font-family:var(--mono); font-size:13px; color:var(--ink); cursor:pointer; padding:4px 0 4px 16px;}
+  .xlink{font-family:var(--mono); font-size:11px; letter-spacing:.12em; color:var(--muted);
+    text-decoration:none; border-bottom:1px solid var(--line2); padding-bottom:2px;}
   #saveind{position:fixed; top:calc(env(safe-area-inset-top) + 52px); right:16px; z-index:30;
     font-family:var(--mono); font-size:10px; letter-spacing:.14em; color:var(--muted);
     opacity:0; transition:opacity .5s ease .4s; pointer-events:none;}
@@ -420,8 +422,9 @@ function rHome(){
       <button class="btn" onclick="$('importfile').click()">IMPORT</button>
       <input type="file" id="importfile" accept=".json,application/json" style="display:none" onchange="importJSON(this)">
     </div>
-    <div style="text-align:center; margin-top:14px"><a href="https://ryan-synergy.github.io/blueprinted/"
-      style="font-family:var(--mono); font-size:11px; letter-spacing:.12em; color:var(--muted); text-decoration:none; border-bottom:1px solid var(--line2); padding-bottom:2px;">BLUEPRINTED — SAVANT CONVERTER →</a></div>
+    <div style="display:flex; justify-content:center; gap:24px; flex-wrap:wrap; margin-top:14px">
+      <a class="xlink" href="https://ryan-synergy.github.io/blueprinted/">BLUEPRINTED →</a>
+      <a class="xlink" href="https://ryan-synergy.github.io/dmf-artafex-configurator/">DMF CONFIGURATOR →</a></div>
     <h2>On file</h2>`;
   if(!projects.length) h += `<div class="empty">No surveys.<br>Start at the front door.</div>`;
   projects.forEach(p=>{
