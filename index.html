@@ -392,7 +392,9 @@ function rTopbar(){
   else if(view==="arrange"||view==="review") left = `<button class="tb-btn left" onclick="go('project')">‹ BACK</button>`;
   else left = `<span class="wordmark">SITEWALK</span>`;
   const mid = view==="home" ? "" : `<span class="wordmark">SITEWALK</span>`;
-  return left + mid + `<button class="tb-btn" onclick="openSheet()">TV SIZES</button>`;
+  return left + mid + `<span style="display:flex; gap:16px">
+    <button class="tb-btn" onclick="openTools()">TOOLS</button>
+    <button class="tb-btn" onclick="openSheet()">TV SIZES</button></span>`;
 }
 function rBottombar(){
   let h = "";
@@ -422,9 +424,6 @@ function rHome(){
       <button class="btn" onclick="$('importfile').click()">IMPORT</button>
       <input type="file" id="importfile" accept=".json,application/json" style="display:none" onchange="importJSON(this)">
     </div>
-    <div style="display:flex; justify-content:center; gap:24px; flex-wrap:wrap; margin-top:14px">
-      <a class="xlink" href="https://ryan-synergy.github.io/blueprinted/">BLUEPRINTED →</a>
-      <a class="xlink" href="https://ryan-synergy.github.io/dmf-artafex-configurator/">DMF CONFIGURATOR →</a></div>
     <h2>On file</h2>`;
   if(!projects.length) h += `<div class="empty">No surveys.<br>Start at the front door.</div>`;
   projects.forEach(p=>{
@@ -745,7 +744,7 @@ function rReview(){
 
 /* ============ overlays ============ */
 function overlay(html){ $("overlay-inner").innerHTML = html; $("overlay").style.display = "block"; $("overlay").scrollTop = 0; }
-function closeOverlay(){ $("overlay").style.display = "none"; }
+function closeOverlay(){ toolsOpen = false; $("overlay").style.display = "none"; }
 
 function doneRoom(){
   const r = room(); const name = r ? (r.name || "room") : "";
@@ -804,6 +803,43 @@ function savePreset(){
   savePresets(); toast("Preset saved: " + name);
 }
 
+const KIT_SELF = "sitewalk";
+const KIT_FALLBACK = [
+  {id:"sitewalk", name:"SiteWalk", desc:"AV site surveys — rooms, flags, build sheet, exports", url:"https://ryan-synergy.github.io/sitewalk/"},
+  {id:"blueprinted", name:"Blueprinted", desc:"Savant config → retrofit takeoff", url:"https://ryan-synergy.github.io/blueprinted/"},
+  {id:"dmf", name:"DMF Configurator", desc:"DMF Artafex take-offs — verified SKUs", url:"https://ryan-synergy.github.io/dmf-artafex-configurator/"},
+  {id:"tvcalc", name:"TV Wall Calculator", desc:"Mounting layout calculator", url:"", status:"parked"}
+];
+let toolsOpen = false;
+function kitList(){
+  try{ const c = JSON.parse(localStorage.getItem("sitewalk.kit")||"null"); if(c && Array.isArray(c.tools) && c.tools.length) return c.tools; }catch(e){}
+  return KIT_FALLBACK;
+}
+function openTools(){
+  toolsOpen = true;
+  renderTools();
+  fetch("https://ryan-synergy.github.io/tools.json", {cache:"no-store"}).then(r=>r.json()).then(j=>{
+    if(j && Array.isArray(j.tools) && j.tools.length){
+      localStorage.setItem("sitewalk.kit", JSON.stringify(j));
+      if(toolsOpen) renderTools();
+    }
+  }).catch(()=>{});
+}
+function renderTools(){
+  const rows = kitList().map(t=>{
+    const here = t.id===KIT_SELF, parked = t.status==="parked" || !t.url;
+    const tag = here ? "YOU'RE HERE" : (parked ? "IN THE SHOP" : "");
+    if(tag) return `<div class="item" style="opacity:.55; cursor:default">
+      <div class="grow"><div class="title">${esc(t.name)}</div><div class="sub">${esc(t.desc||"")}</div></div>
+      <span class="mono" style="font-size:10px; letter-spacing:.12em; color:var(--muted)">${tag}</span></div>`;
+    return `<a class="item" href="${esc(t.url)}" style="text-decoration:none; color:var(--ink)">
+      <div class="grow"><div class="title">${esc(t.name)}</div><div class="sub">${esc(t.desc||"")}</div></div>
+      <span style="color:var(--orange); font-family:var(--mono)">→</span></a>`;
+  }).join("");
+  overlay(`<div class="ovh"><span class="t">SYNERGY FIELD KIT</span><span class="c" onclick="closeOverlay()">CLOSE ✕</span></div>
+    <div style="margin-top:14px">${rows}</div>
+    <div style="text-align:center; margin-top:18px"><a class="xlink" href="https://ryan-synergy.github.io/">FIELD KIT HOME →</a></div>`);
+}
 function openSheet(){
   const fromRoom = view==="room";
   let h = `<div class="ovh"><span class="t">TV DIMENSIONS — 16:9 PANELS, INCHES</span><span class="c" onclick="closeOverlay()">CLOSE ✕</span></div>
