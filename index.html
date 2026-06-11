@@ -419,7 +419,10 @@ function rHome(){
       <button class="btn primary grow" onclick="createProject()">＋ NEW SURVEY</button>
       <button class="btn" onclick="$('importfile').click()">IMPORT</button>
       <input type="file" id="importfile" accept=".json,application/json" style="display:none" onchange="importJSON(this)">
-    </div><h2>On file</h2>`;
+    </div>
+    <div style="text-align:center; margin-top:14px"><a href="https://ryan-synergy.github.io/blueprinted/"
+      style="font-family:var(--mono); font-size:11px; letter-spacing:.12em; color:var(--muted); text-decoration:none; border-bottom:1px solid var(--line2); padding-bottom:2px;">BLUEPRINTED — SAVANT CONVERTER →</a></div>
+    <h2>On file</h2>`;
   if(!projects.length) h += `<div class="empty">No surveys.<br>Start at the front door.</div>`;
   projects.forEach(p=>{
     const fl = projFlags(p).length;
