@@ -87,6 +87,10 @@
   .calc{margin-top:10px; padding:10px 12px; border-top:1px dashed var(--line2);
     font-family:var(--mono); font-size:13px; line-height:1.6;}
   .calc b{color:var(--orange); font-weight:500;}
+  .tabs{display:flex; border-bottom:1px solid var(--ink); margin:2px 0 14px;}
+  .tabs .tab{flex:1; text-align:center; font-family:var(--mono); font-size:11px; letter-spacing:.12em;
+    color:var(--muted); padding:12px 0 10px; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; user-select:none;}
+  .tabs .tab.on{color:var(--ink); border-bottom-color:var(--ink); font-weight:500;}
   .flags{border:1px solid var(--orange); border-radius:3px; padding:10px 13px; margin-bottom:12px;}
   .flags .ftitle{font-family:var(--mono); font-size:11px; letter-spacing:.12em; color:var(--orange); margin-bottom:7px;}
   .flags .fitem{font-size:14px; padding:7px 0; border-top:1px solid var(--line); cursor:pointer;}
@@ -230,6 +234,7 @@ let projects = [], customPresets = [];
 try{ projects = JSON.parse(localStorage.getItem(LS_PROJ) || "[]"); }catch(e){}
 try{ customPresets = JSON.parse(localStorage.getItem(LS_PRESETS) || "[]"); }catch(e){}
 let view = "home", curProj = null, curRoom = null, lastView = "";
+let projTab = "rooms";
 let arrangeSel = null, sheetFromRoom = false, lastDeleted = null;
 
 const save = () => { localStorage.setItem(LS_PROJ, JSON.stringify(projects)); flashSaved(); };
@@ -434,8 +439,9 @@ function render(){
   }
   $("app").innerHTML = html;
   $("topbar").innerHTML = rTopbar();
-  $("bottombar").innerHTML = rBottombar();
-  $("bottombar").style.display = view==="home" ? "none" : "block";
+  const bb = rBottombar();
+  $("bottombar").innerHTML = bb;
+  $("bottombar").style.display = (view==="home" || !bb) ? "none" : "block";
   if(view===lastView) window.scrollTo(0,y); else window.scrollTo(0,0);
   lastView = view;
 }
@@ -452,9 +458,13 @@ function rTopbar(){
     <button class="tb-btn" onclick="openTools()">TOOLS</button>
     <button class="tb-btn" onclick="openSheet()">REFERENCE</button></span>`;
 }
+function setTab(t){ projTab = t; render(); window.scrollTo(0,0); }
 function rBottombar(){
   let h = "";
-  if(view==="project") h = `<button class="btn primary block" onclick="startAddRoom()">＋ ADD ROOM</button>`;
+  if(view==="project"){
+    if(projTab==="rooms") h = `<button class="btn primary block" onclick="startAddRoom()">＋ ADD ROOM</button>`;
+    else if(projTab==="output") h = `<button class="btn primary block" onclick="go('review')">REVIEW &amp; PRINT</button>`;
+  }
   else if(view==="room") h = `<button class="btn" style="flex:1" onclick="doneRoom()">DONE</button>
     <button class="btn primary" style="flex:2" onclick="nextRoom()">NEXT ROOM →</button>`;
   else if(view==="arrange") h = `<button class="btn primary block" onclick="go('project')">DONE ARRANGING</button>`;
@@ -498,17 +508,23 @@ function rHome(){
 function rProject(){
   const p = proj();
   const flags = projFlags(p);
-  let h = `<div class="card">
+  let h = `<div class="tabs">
+    <div class="tab ${projTab==="rooms"?"on":""}" onclick="setTab('rooms')">ROOMS</div>
+    <div class="tab ${projTab==="system"?"on":""}" onclick="setTab('system')">SYSTEM</div>
+    <div class="tab ${projTab==="output"?"on":""}" onclick="setTab('output')">OUTPUT</div></div>`;
+  if(flags.length){
+    h += `<div class="flags"><div class="ftitle">⚑ OPEN — ${flags.length}</div>` +
+      flags.map(f=>`<div class="fitem" onclick="${f.roomId?`jumpRoom('${f.roomId}')`:"setTab('system')"}">${esc(f.room)} <span>— ${esc(f.label)}</span></div>`).join("") + `</div>`;
+  }
+  if(projTab==="system") return h + rSystemTab(p);
+  if(projTab==="output") return h + rOutputTab(p);
+  h += `<div class="card">
     <label class="fld">Client</label><input type="text" value="${esc(p.client)}" placeholder="Client name" oninput="upP('client',this.value)">
     <label class="fld">Address</label><input type="text" value="${esc(p.address)}" placeholder="Street address" oninput="upP('address',this.value)">
     <label class="fld">Date</label><input type="date" value="${esc(p.date)}" oninput="upP('date',this.value)">
     <label class="fld">Job type</label>${chiprow(JOB_TYPES, p.jobType, "setJobType")}
     <label class="fld">Control system</label>${chiprow(CONTROL_SYSTEMS, p.controlSystem, "setCS")}
   </div>`;
-  if(flags.length){
-    h += `<div class="flags"><div class="ftitle">⚑ OPEN — ${flags.length}</div>` +
-      flags.map(f=>`<div class="fitem" onclick="${f.roomId?`jumpRoom('${f.roomId}')`:""}">${esc(f.room)} <span>— ${esc(f.label)}</span></div>`).join("") + `</div>`;
-  }
   h += `<h2>Rooms (${p.rooms.length})${p.rooms.length>1?`<span class="h2btn" onclick="go('arrange')">ARRANGE</span>`:""}</h2>`;
   if(!p.rooms.length) h += `<div class="empty">No rooms. Start at the front door.</div>`;
   const grouped = p.rooms.some(r=>r.floor);
@@ -528,8 +544,11 @@ function rProject(){
     });
   } else h += p.rooms.map(renderRow).join("");
 
+  return h;
+}
+function rSystemTab(p){
   const fit = rackFit(p);
-  h += `<h2>Rack &amp; distribution</h2><div class="card">
+  let h = `<h2>Rack &amp; distribution</h2><div class="card">
     <label class="fld">Rack / head-end location</label>
     <input type="text" value="${esc(p.rack.location)}" placeholder="e.g. Mechanical room, AV closet" oninput="upRack('location',this.value)">
     <label class="fld">Closet size (inches)</label>
@@ -573,9 +592,11 @@ function rProject(){
       ${CAM_TYPES.map(t=>`<option ${c.type===t?"selected":""}>${t}</option>`).join("")}</select>
       <button class="icon-btn" onclick="delCam('${c.id}')">✕</button></div></div>`;
   });
-  h += `<button class="btn block small" onclick="addCam()">＋ ADD CAMERA</button>
-
-  <h2>Build sheet</h2><div class="card"><table class="tally">` +
+  h += `<button class="btn block small" onclick="addCam()">＋ ADD CAMERA</button>`;
+  return h;
+}
+function rOutputTab(p){
+  let h = `<h2>Build sheet</h2><div class="card"><table class="tally">` +
     buildSheet(p).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="tv ${String(v).includes("TBD")?"twarn":""}">${esc(v)}</td></tr>`).join("") +
   `</table></div>
 
@@ -584,7 +605,6 @@ function rProject(){
 
   <h2>Output</h2><div class="card">
     <div class="row" style="flex-wrap:wrap">
-      <button class="btn grow" onclick="go('review')">REVIEW &amp; PRINT</button>
       <button class="btn grow" onclick="exportCSV()">CSV</button>
       <button class="btn grow" onclick="exportJSON()">JSON</button>
       <button class="btn grow" onclick="copySummary()">COPY TEXT</button></div>
@@ -948,7 +968,7 @@ function sheetPick(s){ const r=room(); if(r){ r.tvSize=String(s); save(); } clos
 
 /* ============ actions ============ */
 function createProject(){ const p=newProj(); projects.unshift(p); curProj=p.id; go("project"); save(); }
-function openProject(id){ curProj=id; go("project"); }
+function openProject(id){ curProj=id; projTab="rooms"; go("project"); }
 function jumpRoom(id){ curRoom=id; view="room"; render(); }
 function openRoom(id){ curRoom=id; view="room"; render(); }
 function delProject(id){
