@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="SiteWalk">
+<meta name="apple-mobile-web-app-title" content="AVWalk">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="favicon.png">
 <meta name="theme-color" content="#F6F4ED" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#141512" media="(prefers-color-scheme: dark)">
-<title>SiteWalk — AV Site Survey</title>
+<title>AVWalk — AV Site Survey</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -452,8 +452,8 @@ function rTopbar(){
   if(view==="project") left = `<button class="tb-btn left" onclick="go('home')">‹ SURVEYS</button>`;
   else if(view==="room") left = `<button class="tb-btn left" onclick="go('project')">‹ ROOMS</button>`;
   else if(view==="arrange"||view==="review") left = `<button class="tb-btn left" onclick="go('project')">‹ BACK</button>`;
-  else left = `<span class="wordmark">SITEWALK</span>`;
-  const mid = view==="home" ? "" : `<span class="wordmark">SITEWALK</span>`;
+  else left = `<span class="wordmark">AVWALK</span>`;
+  const mid = view==="home" ? "" : `<span class="wordmark">AVWALK</span>`;
   return left + mid + `<span style="display:flex; gap:16px">
     <button class="tb-btn" onclick="openTools()">TOOLS</button>
     <button class="tb-btn" onclick="openSheet()">REFERENCE</button></span>`;
@@ -848,7 +848,7 @@ function rReview(){
     p.cameras.map(c=>esc(c.location||"?")+" — "+esc(c.type)).join("<br>") + `</div>`;
   if(p.rack.location||p.rack.notes) h += `<h2>Head-end</h2><div style="font-size:14px; line-height:1.6">${esc(p.rack.location)}${p.rack.notes?`<div class="muted">${esc(p.rack.notes)}</div>`:""}</div>`;
   if(p.notes) h += `<h2>Project notes</h2><div style="font-size:14px; line-height:1.6">${esc(p.notes)}</div>`;
-  h += `<div class="muted mono no-print" style="margin-top:26px; font-size:11px">SITEWALK · ${esc(p.date)}</div>`;
+  h += `<div class="muted mono no-print" style="margin-top:26px; font-size:11px">AVWALK · ${esc(p.date)}</div>`;
   return h;
 }
 
@@ -915,7 +915,7 @@ function savePreset(){
 
 const KIT_SELF = "sitewalk";
 const KIT_FALLBACK = [
-  {id:"sitewalk", name:"SiteWalk", desc:"AV site surveys — rooms, flags, build sheet, exports", url:"https://ryan-synergy.github.io/sitewalk/"},
+  {id:"sitewalk", name:"AVWalk", desc:"AV site surveys — rooms, flags, build sheet, exports", url:"https://ryan-synergy.github.io/sitewalk/"},
   {id:"blueprinted", name:"Blueprinted", desc:"Savant config → retrofit takeoff", url:"https://ryan-synergy.github.io/blueprinted/"},
   {id:"dmf", name:"DMF Configurator", desc:"DMF Artafex take-offs — verified SKUs", url:"https://ryan-synergy.github.io/dmf-artafex-configurator/"},
   {id:"tvcalc", name:"TV Wall Calculator", desc:"Mounting layout calculator", url:"", status:"parked"}
@@ -1065,7 +1065,7 @@ function exwStr(r){ return EXW.filter(([k])=>r.exw[k]>0).map(([k,l])=>l+(r.exw[k
 
 function buildCSV(){
   const p=proj(), rows=[];
-  rows.push(["SITEWALK SURVEY"]);
+  rows.push(["AVWALK SURVEY"]);
   rows.push(["Client",p.client],["Address",p.address],["Date",p.date],["Job type",p.jobType],
     ["Control system",p.controlSystem],["Viewing habits",p.habits.join("; ")],[]);
   const flags = projFlags(p);
